@@ -28,22 +28,32 @@ fixpoint_init( fixpoint_t *val, uint32_t whole, uint32_t frac, bool negative ) {
 
 uint32_t
 fixpoint_get_whole( const fixpoint_t *val ) {
-  // TODO: implement
+  return val->whole;
 }
 
 uint32_t
 fixpoint_get_frac( const fixpoint_t *val ) {
-  // TODO: implement
+  return val->frac;
 }
 
 bool
 fixpoint_is_negative( const fixpoint_t *val ) {
-  // TODO: implement
+  if (val->negative == true) {
+    return true;
+  } else {
+    return false;
+  }
 }
 
 void
 fixpoint_negate( fixpoint_t *val ) {
-  // TODO: implement
+  if (val->whole != 0 || val->frac != 0) {
+    if (val->negative == true) {
+      val->negative = false;
+    } else {
+      val->negative = true;
+    }
+  }
 }
 
 result_t

@@ -17,7 +17,13 @@
 
 void
 fixpoint_init( fixpoint_t *val, uint32_t whole, uint32_t frac, bool negative ) {
-  // TODO: implement
+  val->whole = whole;
+  val->frac = frac;
+  val->negative = negative;
+
+  if (whole == 0 && frac == 0) {
+    val->negative = false;
+  }
 }
 
 uint32_t

@@ -9,7 +9,49 @@
 // if you want to be able to write unit tests for them
 ////////////////////////////////////////////////////////////////////////
 
-// TODO: add helper functions
+result_t
+addSameSign (fixpoint_t *result, const fixpoint_t *left, const fixpoint_t *right) {
+  uint32_t fracSum = left->frac + right->frac;
+  bool extraOne = 0;
+
+  //check if overflow occured
+  if (fracSum < right->frac || fracSum < left->frac) { 
+    extraOne = 1;
+  }
+  int32_t wholeSum = left->whole + right->whole;
+  if (extraOne == 1) {
+    wholeSum += 1;
+  }
+
+  result->whole = wholeSum;
+  result->frac = fracSum;
+
+  if (wholeSum > UINT32_MAX) {
+    return RESULT_OVERFLOW;
+  }
+  return RESULT_OK;
+}
+
+result_t
+addDiffSign (fixpoint_t *result, const fixpoint_t *left, const fixpoint_t *right) {
+  uint32_t fracSum = left->frac;
+  uint32_t wholeSum = left->whole;
+
+  if (fracSum < right->frac) {
+    fracSum += 0x100000000;
+    wholeSum -= 1;
+  }
+
+  result->frac = fracSum - right->frac;
+  result->whole = wholeSum - left->frac;
+  
+  //check for special case of zero being negative
+  if (wholeSum == 0 && fracSum == 0) {
+    result->negative = 0;
+  }
+
+  return RESULT_OK;
+}
 
 ////////////////////////////////////////////////////////////////////////
 // Public API functions
@@ -58,8 +100,18 @@ fixpoint_negate( fixpoint_t *val ) {
 
 result_t
 fixpoint_add( fixpoint_t *result, const fixpoint_t *left, const fixpoint_t *right ) {
-  // TODO: implement
+  if (left->negative == right->negative) {
+   return addSameSign(result, left, right);
+  } else {
+    if (fixpoint_compare(left, right) == 1 || fixpoint_compare(left, right) == 0) {
+      return addDiffSign(result, left, right);
+    } else if (fixpoint_compare(left, right) == -1) {
+      return addDiffSign(result, right, left);
+    } 
+  }
 }
+
+
 
 result_t
 fixpoint_sub( fixpoint_t *result, const fixpoint_t *left, const fixpoint_t *right ) {
@@ -73,7 +125,50 @@ fixpoint_mul( fixpoint_t *result, const fixpoint_t *left, const fixpoint_t *righ
 
 int
 fixpoint_compare( const fixpoint_t *left, const fixpoint_t *right ) {
-  // TODO: implement
+
+  if (left->negative && !right->negative) {
+    return -1;
+  }
+  if (right->negative && !left->negative) {
+    return 1;
+  }
+
+  bool lNeg = left->negative;
+  bool rNeg = right->negative;
+
+  if (left->whole > right->whole) {
+    if (lNeg && rNeg) {
+      return -1;
+    } else {
+      return 1;
+    }
+  }
+
+  if (left->whole < right->whole) {
+    if (lNeg && rNeg) {
+      return 1;
+    } else {
+      return -1;
+    }
+  }
+
+  if (left->frac > right->frac) {
+    if (lNeg && rNeg) {
+      return -1;
+    } else {
+      return 1;
+    }
+  }
+
+  if (left->frac < right->frac) {
+    if (lNeg && rNeg) {
+      return 1;
+    } else {
+      return -1;
+    }
+  }
+
+  return 0;
 }
 
 void

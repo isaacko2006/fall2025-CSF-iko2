@@ -213,13 +213,24 @@ fixpoint_compare( const fixpoint_t *left, const fixpoint_t *right ) {
 void
 fixpoint_format_hex( fixpoint_str_t *s, const fixpoint_t *val ) {
   // TODO: implement
-  char arr[32];
-  char *arrPos = arr;
-
   if (val->negative && (val->whole != 0 || val->frac != 0)) {
-    *arrPos++ = '-';
+    snprintf(s, FIXPOINT_STR_MAX_SIZE, "-%08X.%08X", val->whole, val->frac);
   }
-  
+  else {
+    snprintf(s, FIXPOINT_STR_MAX_SIZE, "%08X.%08X", val->whole, val->frac);
+  }
+
+  char *decimal = strchr(s, '.');
+  if (decimal) {
+    char *endpoint = s + strlen(s) - 1;
+    while (endpoint > decimal && *endpoint == '0') {
+      *endpoint = '\0';
+      endpoint--;
+    }
+    if (*endpoint == '.') {
+      *endpoint = '\0';
+    }
+  }
 }
 
 bool

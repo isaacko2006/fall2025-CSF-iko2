@@ -17,45 +17,51 @@
 
 result_t
 addSameSign (fixpoint_t *result, const fixpoint_t *left, const fixpoint_t *right) {
-  uint32_t fracSum = left->frac + right->frac;
+  uint64_t fracSum = (uint64_t)left->frac + (uint64_t)right->frac;
+  uint32_t fracSumSmaller = (uint32_t)fracSum;
   bool extraOne = 0;
 
   //check if overflow occured
   if (fracSum < right->frac || fracSum < left->frac) { 
     extraOne = 1;
   }
-  int32_t wholeSum = left->whole + right->whole;
+  //to prevent premature overflow, use a larger bit integer (64 bit)
+  int64_t wholeSum = (int64_t) left->whole + (int64_t) right->whole;
   if (extraOne == 1) {
     wholeSum += 1;
   }
 
-  result->whole = wholeSum;
-  result->frac = fracSum;
-
-  if (wholeSum > UINT32_MAX) {
+  if (wholeSum > INT32_MAX || wholeSum < INT32_MIN) {
     return RESULT_OVERFLOW;
   }
+
+  result->whole = (int32_t) wholeSum;
+  result->frac = fracSumSmaller;
   return RESULT_OK;
 }
 
 result_t
 addDiffSign (fixpoint_t *result, const fixpoint_t *left, const fixpoint_t *right) {
-  uint32_t fracSum = left->frac;
-  uint32_t wholeSum = left->whole;
+  
+  fixpoint_t holder;
+  //use larger bits to prevent premature errors
+  int64_t fracSum = left->frac;
+  int64_t wholeSum = (int64_t)left->whole;
 
-  if (fracSum < right->frac) {
-    fracSum += 0x100000000;
+  if (left->frac < right->frac) {
+    fracSum += ((uint64_t)1 << 32);
     wholeSum -= 1;
   }
-
-  result->frac = fracSum - right->frac;
-  result->whole = wholeSum - left->frac;
+  //Cast down from the larger bit
+  holder.frac = (uint32_t)(fracSum - right->frac);
+  holder.whole = (uint32_t)(wholeSum - (int64_t)right->whole);
   
   //check for special case of zero being negative
-  if (wholeSum == 0 && fracSum == 0) {
-    result->negative = 0;
+  if (holder.whole == 0 && holder.frac == 0) {
+    holder.negative = 0;
   }
 
+  *result = holder;
   return RESULT_OK;
 }
 
@@ -110,12 +116,16 @@ fixpoint_add( fixpoint_t *result, const fixpoint_t *left, const fixpoint_t *righ
     result->negative = left->negative;
    return addSameSign(result, left, right);
   } else {
-    if (fixpoint_compare(left, right) == 1 || fixpoint_compare(left, right) == 0) {
+    int magnitude = fixpoint_compare(left, right);
+    if (magnitude >= 0) {
+      result->negative = left->negative;
       return addDiffSign(result, left, right);
-    } else if (fixpoint_compare(left, right) == -1) {
+    } else {
+      result->negative = right->negative;
       return addDiffSign(result, right, left);
-    } 
+    }
   }
+  return RESULT_OK;
 }
 
 
@@ -132,6 +142,7 @@ fixpoint_sub( fixpoint_t *result, const fixpoint_t *left, const fixpoint_t *righ
 result_t
 fixpoint_mul( fixpoint_t *result, const fixpoint_t *left, const fixpoint_t *right ) {
   // TODO: implement
+  /*
   uint64_t leftMag = (((uint64_t)left->whole) << 32) | left->frac;
   uint64_t rightMag = (((uint64_t)right->whole) << 32) | right->frac;
 
@@ -166,10 +177,15 @@ fixpoint_mul( fixpoint_t *result, const fixpoint_t *left, const fixpoint_t *righ
   else {
     return RESULT_OK;
   }
+    */
 }
 
 int
 fixpoint_compare( const fixpoint_t *left, const fixpoint_t *right ) {
+
+  if (left->whole == 0 && right->whole == 0 && left->frac == 0 && right->frac == 0) {
+    return 0;
+  }
 
   if (left->negative && !right->negative) {
     return -1;
@@ -178,39 +194,27 @@ fixpoint_compare( const fixpoint_t *left, const fixpoint_t *right ) {
     return 1;
   }
 
-  bool lNeg = left->negative;
-  bool rNeg = right->negative;
+  int sign;
+  if (left->negative == 1) {
+    sign = -1;
+  } else {
+    sign = 1;
+  }
 
   if (left->whole > right->whole) {
-    if (lNeg && rNeg) {
-      return -1;
-    } else {
-      return 1;
-    }
+    return 1 * sign;
   }
 
   if (left->whole < right->whole) {
-    if (lNeg && rNeg) {
-      return 1;
-    } else {
-      return -1;
-    }
+    return -1 * sign;
   }
 
   if (left->frac > right->frac) {
-    if (lNeg && rNeg) {
-      return -1;
-    } else {
-      return 1;
-    }
+    return 1 * sign;
   }
 
   if (left->frac < right->frac) {
-    if (lNeg && rNeg) {
-      return 1;
-    } else {
-      return -1;
-    }
+    return -1 * sign;
   }
 
   return 0;
@@ -219,6 +223,7 @@ fixpoint_compare( const fixpoint_t *left, const fixpoint_t *right ) {
 void
 fixpoint_format_hex( fixpoint_str_t *s, const fixpoint_t *val ) {
   // TODO: implement
+  /*
   if (val->negative && (val->whole != 0 || val->frac != 0)) {
     snprintf(s, FIXPOINT_STR_MAX_SIZE, "-%08X.%08X", val->whole, val->frac);
   }
@@ -237,11 +242,13 @@ fixpoint_format_hex( fixpoint_str_t *s, const fixpoint_t *val ) {
       *endpoint = '\0';
     }
   }
+    */
 }
 
 bool
 fixpoint_parse_hex( fixpoint_t *val, const fixpoint_str_t *s ) {
   // TODO: implement
+  /*
   val->negative = false;
   val->whole = 0;
   val->frac = 0;
@@ -261,4 +268,5 @@ fixpoint_parse_hex( fixpoint_t *val, const fixpoint_str_t *s ) {
    str += readChars;
 
    //TODO - Continue implementation of parse
+   */
 }

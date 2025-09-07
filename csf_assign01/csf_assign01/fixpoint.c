@@ -9,6 +9,12 @@
 // if you want to be able to write unit tests for them
 ////////////////////////////////////////////////////////////////////////
 
+//TODO LIST
+//Check addSameSign and addDiffSign (especially for overflow/underflow)
+//Complete add 
+//Complete parse hex
+//Write more Unit Tests
+
 result_t
 addSameSign (fixpoint_t *result, const fixpoint_t *left, const fixpoint_t *right) {
   uint32_t fracSum = left->frac + right->frac;
@@ -236,4 +242,23 @@ fixpoint_format_hex( fixpoint_str_t *s, const fixpoint_t *val ) {
 bool
 fixpoint_parse_hex( fixpoint_t *val, const fixpoint_str_t *s ) {
   // TODO: implement
+  val->negative = false;
+  val->whole = 0;
+  val->frac = 0;
+  const char *str = s;
+
+   if (*str == '-') {
+    val->negative = true;
+    str++;
+   }
+   int readChars = 0;
+   unsigned int wholePortion = 0;
+
+   if (sscanf(str, "%*X%n", &wholePortion, &readChars) != 1) {
+    return false;
+   }
+   val->whole = wholePortion;
+   str += readChars;
+
+   //TODO - Continue implementation of parse
 }

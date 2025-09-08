@@ -206,7 +206,7 @@ void test_add( TestObjs *objs ) {
   // Instead, add new test functions containing your new tests.
 
   fixpoint_t result;
-
+  
   ASSERT( fixpoint_add( &result, &objs->zero, &objs->zero ) == RESULT_OK );
   ASSERT( 0 == result.frac );
   ASSERT( 0 == result.whole );
@@ -220,7 +220,7 @@ void test_add( TestObjs *objs ) {
   ASSERT( fixpoint_add( &result, &objs->max, &objs->one ) == RESULT_OVERFLOW );
 
   ASSERT( fixpoint_add( &result, &objs->max, &objs->min ) == RESULT_OVERFLOW );
-
+  
   ASSERT( fixpoint_add( &result, &objs->zero, &objs->neg_three_eighths ) == RESULT_OK );
   ASSERT( 0x60000000 == result.frac );
   ASSERT( 0 == result.whole );

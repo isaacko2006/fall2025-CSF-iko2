@@ -15,8 +15,15 @@
 //Complete parse hex
 //Write more Unit Tests
 
+int compareAbsoluteVal(const fixpoint_t *a, const fixpoint_t *b) {
+
+  //write this shit
+
+}
+
 result_t
 addSameSign (fixpoint_t *result, const fixpoint_t *left, const fixpoint_t *right) {
+  /*
   uint64_t fracSum = (uint64_t)left->frac + (uint64_t)right->frac;
   uint32_t fracSumSmaller = (uint32_t)fracSum;
   bool extraOne = 0;
@@ -38,11 +45,27 @@ addSameSign (fixpoint_t *result, const fixpoint_t *left, const fixpoint_t *right
   result->whole = (int32_t) wholeSum;
   result->frac = fracSumSmaller;
   return RESULT_OK;
+  */
+ uint64_t frac64 = (uint64_t)left->frac + (uint64_t)right->frac;
+  uint32_t frac   = (uint32_t)frac64;
+  uint64_t carry  = frac64 >> 32;
+
+  // add whole parts (+ carry) in 64 bits to detect overflow
+  uint64_t whole64 = (uint64_t)left->whole + (uint64_t)right->whole + carry;
+  uint32_t whole   = (uint32_t)whole64;
+
+  result->whole = whole;
+  result->frac  = frac;
+
+  result_t st = RESULT_OK;
+  if (whole64 >> 32) st |= RESULT_OVERFLOW;   // overflow if high bits set
+
+  return st;
 }
 
 result_t
 addDiffSign (fixpoint_t *result, const fixpoint_t *left, const fixpoint_t *right) {
-  
+  /*
   fixpoint_t holder;
   //use larger bits to prevent premature errors
   int64_t fracSum = left->frac;
@@ -55,7 +78,7 @@ addDiffSign (fixpoint_t *result, const fixpoint_t *left, const fixpoint_t *right
   //Cast down from the larger bit
   holder.frac = (uint32_t)(fracSum - right->frac);
   holder.whole = (uint32_t)(wholeSum - (int64_t)right->whole);
-  
+
   //check for special case of zero being negative
   if (holder.whole == 0 && holder.frac == 0) {
     holder.negative = 0;
@@ -63,6 +86,22 @@ addDiffSign (fixpoint_t *result, const fixpoint_t *left, const fixpoint_t *right
 
   *result = holder;
   return RESULT_OK;
+  */
+ uint32_t whole = left->whole;
+  uint32_t frac  = left->frac;
+
+  if (frac < right->frac) {
+    // borrow 1 from whole into frac
+    frac  = (uint32_t)( ((uint64_t)frac + (1ULL << 32)) - (uint64_t)right->frac );
+    whole = whole - 1 - right->whole;
+  } else {
+    frac  = frac  - right->frac;
+    whole = whole - right->whole;
+  }
+
+  result->whole = whole;
+  result->frac  = frac;
+  return RESULT_OK;   // no overflow possible in different-sign add
 }
 
 ////////////////////////////////////////////////////////////////////////
@@ -112,6 +151,7 @@ fixpoint_negate( fixpoint_t *val ) {
 
 result_t
 fixpoint_add( fixpoint_t *result, const fixpoint_t *left, const fixpoint_t *right ) {
+  /*
   if (left->negative == right->negative) {
     result->negative = left->negative;
    return addSameSign(result, left, right);
@@ -126,6 +166,40 @@ fixpoint_add( fixpoint_t *result, const fixpoint_t *left, const fixpoint_t *righ
     }
   }
   return RESULT_OK;
+  */
+ if (left->negative == right->negative) {
+    // same sign -> add magnitudes; sign is that common sign
+    result->negative = left->negative;
+    result_t st = addSameSign(result, left, right);
+
+    // if exact and numerically zero, clear sign
+    if (st == RESULT_OK && result->whole == 0 && result->frac == 0)
+      result->negative = false;
+
+    // note: negative-overflow zero keeps negative=true per spec
+    return st;
+  } else {
+    // different signs -> subtract smaller magnitude from larger
+    int m = cmp_mag(left, right);  // compare magnitudes, ignore sign
+    if (m == 0) {
+      // exact zero
+      result->whole = 0;
+      result->frac  = 0;
+      result->negative = false;
+      return RESULT_OK;
+    }
+
+    const fixpoint_t *big   = (m > 0) ? left  : right;
+    const fixpoint_t *small = (m > 0) ? right : left;
+
+    result->negative = big->negative;           // sign of larger magnitude
+    result_t st = addDiffSign(result, big, small);
+
+    if (result->whole == 0 && result->frac == 0)
+      result->negative = false;                 // zero is never negative
+
+    return st;  // no overflow in different-sign case
+  }
 }
 
 

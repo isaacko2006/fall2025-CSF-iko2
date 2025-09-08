@@ -185,7 +185,6 @@ fixpoint_sub( fixpoint_t *result, const fixpoint_t *left, const fixpoint_t *righ
 
 result_t
 fixpoint_mul( fixpoint_t *result, const fixpoint_t *left, const fixpoint_t *right ) {
-  // TODO: implement
   /*
   uint64_t leftMag = (((uint64_t)left->whole) << 32) | left->frac;
   uint64_t rightMag = (((uint64_t)right->whole) << 32) | right->frac;
@@ -222,6 +221,7 @@ fixpoint_mul( fixpoint_t *result, const fixpoint_t *left, const fixpoint_t *righ
     return RESULT_OK;
   }
     */
+  
 }
 
 int
@@ -287,6 +287,42 @@ fixpoint_format_hex( fixpoint_str_t *s, const fixpoint_t *val ) {
     }
   }
     */
+  char *output = s->str;
+  size_t size = FIXPOINT_STR_MAX_SIZE;
+  //account for negative
+  if (val->negative == 1 && size > 1) {
+    *output = '-';
+    size--;
+    output++;
+  }
+  //account for whole part
+  if (val->whole == 0 && size > 1) {
+    *output = '0';
+    size--;
+    output++;
+  } else {
+    int wholeLength = snprintf(output, size, "%x", val->whole);
+    output += wholeLength;
+    size = size - (size_t)wholeLength;
+  }
+
+  if (size > 1) { 
+    *output++ = '.'; 
+    size--; 
+  }
+
+  //account for decimal part
+  if (val->frac == 0) {
+    if (size > 1) { 
+      *output = '0'; 
+      output++;
+      size--; 
+    }
+  } else {
+    
+  }
+
+
 }
 
 bool

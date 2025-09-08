@@ -15,9 +15,22 @@
 //Complete parse hex
 //Write more Unit Tests
 
-int compareAbsoluteVal(const fixpoint_t *a, const fixpoint_t *b) {
+int compareAbsoluteVal(const fixpoint_t *num1, const fixpoint_t *num2) {
+  
+  fixpoint_t val1 = *num1;
+  fixpoint_t val2 = *num2;
+  val1.negative = false;
+  val2.negative = false;
 
-  //write this shit
+  if (val1.whole == 0 && val1.frac == 0){
+    val1.negative = false;
+  } 
+
+  if (val2.whole == 0 && val2.frac == 0){
+    val2.negative = false;
+  } 
+
+  return fixpoint_compare(&val1, &val2);
 
 }
 

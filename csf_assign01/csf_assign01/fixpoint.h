@@ -128,6 +128,11 @@ addSameSign( fixpoint_t *result, const fixpoint_t *left, const fixpoint_t *right
 result_t
 addDiffSign( fixpoint_t *result, const fixpoint_t *left, const fixpoint_t *right );
 
+//! Helper function to compare the absolute value of 2 numbers
+//! @param left the first value to be compared
+//! @param right the second value to be compared
+//! @return -1 if the first number is bigger, zero if equal, 1 if second is larger 
+int compareAbsoluteVal(const fixpoint_t *num1, const fixpoint_t *num2);
 
 //! Compute the difference of two fixpoint_t values.
 //! If the exact difference can be represented in a fixpoint_t value,

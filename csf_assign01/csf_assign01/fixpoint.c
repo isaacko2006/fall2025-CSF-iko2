@@ -135,22 +135,6 @@ fixpoint_negate( fixpoint_t *val ) {
 
 result_t
 fixpoint_add( fixpoint_t *result, const fixpoint_t *left, const fixpoint_t *right ) {
-  /*
-  if (left->negative == right->negative) {
-    result->negative = left->negative;
-   return addSameSign(result, left, right);
-  } else {
-    int magnitude = fixpoint_compare(left, right);
-    if (magnitude >= 0) {
-      result->negative = left->negative;
-      return addDiffSign(result, left, right);
-    } else {
-      result->negative = right->negative;
-      return addDiffSign(result, right, left);
-    }
-  }
-  return RESULT_OK;
-  */
  if (left->negative == right->negative) {
     result->negative = left->negative;
 
@@ -180,12 +164,12 @@ fixpoint_add( fixpoint_t *result, const fixpoint_t *left, const fixpoint_t *righ
     }
     //take the sign of the larger
     result->negative = bigger->negative;           
-    result_t st = addDiffSign(result, bigger, smaller);
+    result_t status = addDiffSign(result, bigger, smaller);
 
     if (result->whole == 0 && result->frac == 0) {
       result->negative = false;
     }
-    return st;
+    return status;
   }
 }
 

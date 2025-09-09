@@ -328,7 +328,7 @@ fixpoint_format_hex( fixpoint_str_t *s, const fixpoint_t *val ) {
 bool
 fixpoint_parse_hex( fixpoint_t *val, const fixpoint_str_t *s ) {
   // TODO: implement
-  /*
+  
   val->negative = false;
   val->whole = 0;
   val->frac = 0;
@@ -348,5 +348,5 @@ fixpoint_parse_hex( fixpoint_t *val, const fixpoint_str_t *s ) {
    str += readChars;
 
    //TODO - Continue implementation of parse
-   */
+   
 }

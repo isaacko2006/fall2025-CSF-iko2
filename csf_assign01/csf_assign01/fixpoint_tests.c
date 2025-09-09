@@ -486,6 +486,8 @@ void test_add_2( TestObjs *objs ) {
   ASSERT( false == result.negative );
 
   ASSERT( fixpoint_add( &result, &objs->mid, &objs->mid ) == RESULT_OVERFLOW );
+
+  ASSERT( fixpoint_add( &result, &objs->min, ))
 }
 
 void test_sub_2( TestObjs *objs ) {

@@ -184,44 +184,56 @@ fixpoint_sub( fixpoint_t *result, const fixpoint_t *left, const fixpoint_t *righ
 }
 
 result_t
-fixpoint_mul( fixpoint_t *result, const fixpoint_t *left, const fixpoint_t *right ) {
-  /*
-  uint64_t leftMag = (((uint64_t)left->whole) << 32) | left->frac;
-  uint64_t rightMag = (((uint64_t)right->whole) << 32) | right->frac;
+fixpoint_mul(fixpoint_t *result, const fixpoint_t *left, const fixpoint_t *right)
+{
+  //64 bit magnitudes
+  uint64_t WX = ((uint64_t)left->whole << 32) | left->frac;
+  uint64_t YZ = ((uint64_t)right->whole << 32) | right->frac;
 
-  uint64_t Y = rightMag >> 32;
-  uint64_t Z = (uint32_t) rightMag;
+  //split magnitudes into low and high portions (32 bit)
+  uint32_t leftHigh = (uint32_t)(WX >> 32);
+  uint32_t leftLow = (uint32_t)(WX & 0xFFFFFFFF);
+  uint32_t rightHigh = (uint32_t)(YZ >> 32);
+  uint32_t rightLow = (uint32_t)(YZ & 0xFFFFFFFF);
 
-  uint64_t PRS = leftMag * Z;
-  uint64_t TUV = leftMag * Y;
+  //64 bit products uncombined
+  uint64_t lowProduct = (uint64_t)leftLow * rightLow;   // 64-bit
+  uint64_t lowHighProduct = (uint64_t)leftLow * rightHigh;  // 64-bit
+  uint64_t highLowProduct = (uint64_t)leftHigh * rightLow;  // 64-bit
+  uint64_t highProduct = (uint64_t)leftHigh * rightHigh; // 64-bit
 
-  uint64_t low32 = (uint32_t) PRS;
-  uint64_t mid64 = (PRS >> 32) + (TUV << 32);
-  uint64_t high32 = (TUV >> 32);
+  //recombine to get middle 64 bits split into low and high
+  uint64_t middleLow = (lowProduct >> 32) + (lowHighProduct & 0xFFFFFFFF) + (highLowProduct & 0xFFFFFFFF);
+  uint64_t middleHigh = (lowProduct >> 64) + (lowHighProduct >> 32) + (highLowProduct >> 32) + highProduct;
 
-  result->whole = (uint32_t)(mid64 >> 32);
-  result->frac = (uint32_t) mid64;
+  //combine low and high of middle bits to get 64 bit middle portion
+  uint64_t middle64 = (middleHigh << 32) | (middleLow & 0xFFFFFFFF);
 
+  //split middle 64 into whole and frac parts
+  result->whole = (uint32_t)(middle64 >> 32);
+  result->frac = (uint32_t)(middle64 & 0xFFFFFFFF);
+
+  //determine sign of product
   result->negative = (left->negative != right->negative);
-
-  if (result->whole == 0 && result->frac == 0 ) {
-    result->negative = false;
+  //make sure 0 isn't negative
+  if (result->whole == 0 && result->frac == 0)
+  {
+    result->negative = false; 
   }
 
-  if (high32 != 0 && low32 != 0) {
-    return RESULT_OVERFLOW | RESULT_UNDERFLOW;
-  }
-  else if (high32 != 0) {
+  //if high middle bits are nonzero, overflow
+  if (middleHigh >> 32)
+  {
     return RESULT_OVERFLOW;
   }
-  else if (low32 != 0) {
+
+  //if low bits are nonzero, underflow
+  if ((lowProduct & 0xFFFFFFFF) != 0)
+  {
     return RESULT_UNDERFLOW;
   }
-  else {
-    return RESULT_OK;
-  }
-    */
-  
+
+  return RESULT_OK;
 }
 
 int
@@ -264,89 +276,96 @@ fixpoint_compare( const fixpoint_t *left, const fixpoint_t *right ) {
   return 0;
 }
 
-void
-fixpoint_format_hex( fixpoint_str_t *s, const fixpoint_t *val ) {
-  // TODO: implement
-  /*
-  if (val->negative && (val->whole != 0 || val->frac != 0)) {
-    snprintf(s, FIXPOINT_STR_MAX_SIZE, "-%08X.%08X", val->whole, val->frac);
-  }
-  else {
-    snprintf(s, FIXPOINT_STR_MAX_SIZE, "%08X.%08X", val->whole, val->frac);
-  }
+void fixpoint_format_hex(fixpoint_str_t *s, const fixpoint_t *val)
+{
+  //array to build format with
+  char temp[FIXPOINT_STR_MAX_SIZE];
 
-  char *decimal = strchr(s, '.');
-  if (decimal) {
-    char *endpoint = s + strlen(s) - 1;
-    while (endpoint > decimal && *endpoint == '0') {
-      *endpoint = '\0';
-      endpoint--;
+    //if zero, then format should be "0.0"
+    if (val->whole == 0 && val->frac == 0) {
+        strncpy(s->str, "0.0", FIXPOINT_STR_MAX_SIZE);
+        return;
     }
-    if (*endpoint == '.') {
-      *endpoint = '\0';
+
+    //populates array, uses lowercase hex, includes 8 digits for frac
+    if (val->negative) {
+        snprintf(temp, sizeof(temp), "-%x.%08x", val->whole, val->frac);
+    } else {
+        snprintf(temp, sizeof(temp), "%x.%08x", val->whole, val->frac);
     }
-  }
-    */
-  char *output = s->str;
-  size_t size = FIXPOINT_STR_MAX_SIZE;
-  //account for negative
-  if (val->negative == 1 && size > 1) {
-    *output = '-';
-    size--;
-    output++;
-  }
-  //account for whole part
-  if (val->whole == 0 && size > 1) {
-    *output = '0';
-    size--;
-    output++;
-  } else {
-    int wholeLength = snprintf(output, size, "%x", val->whole);
-    output += wholeLength;
-    size = size - (size_t)wholeLength;
-  }
 
-  if (size > 1) { 
-    *output++ = '.'; 
-    size--; 
-  }
-
-  //account for decimal part
-  if (val->frac == 0) {
-    if (size > 1) { 
-      *output = '0'; 
-      output++;
-      size--; 
+    //trimming of zeros from frac
+    char *decimal = strchr(temp, '.');
+    if (decimal) {
+        char *endPtr = temp + strlen(temp) - 1;
+        while (endPtr > decimal && *endPtr == '0') {
+            *endPtr = '\0';
+            endPtr--;
+        }
+        //if all zeros removed, make sure there is a zero after the dot to maintain format
+        if (*endPtr == '.') {
+            *(endPtr + 1) = '0';
+            *(endPtr + 2) = '\0';
+        }
     }
-  } else {
-    
-  }
 
-
+    //copy string into s->str
+    strncpy(s->str, temp, FIXPOINT_STR_MAX_SIZE);
+    s->str[FIXPOINT_STR_MAX_SIZE - 1] = '\0';
 }
 
-bool
-fixpoint_parse_hex( fixpoint_t *val, const fixpoint_str_t *s ) {
-  // TODO: implement
-  
+bool fixpoint_parse_hex(fixpoint_t *val, const fixpoint_str_t *s)
+{
+  const char *str = s->str;
   val->negative = false;
-  val->whole = 0;
-  val->frac = 0;
-  const char *str = s;
 
-   if (*str == '-') {
+  //if first character is -, mark as negative and continue
+  if (*str == '-')
+  {
     val->negative = true;
     str++;
-   }
-   int readChars = 0;
-   unsigned int wholePortion = 0;
+  }
 
-   if (sscanf(str, "%*X%n", &wholePortion, &readChars) != 1) {
+  //variables to hold parsed whole portion as well as num read characters
+  unsigned int wholeParse = 0;
+  int numRead = 0;
+  //%n tracks hex digits like instructions said
+  if (sscanf(str, "%x%n", &wholeParse, &numRead) != 1)
+  {
+    //parse failed
     return false;
-   }
-   val->whole = wholePortion;
-   str += readChars;
+  }
 
-   //TODO - Continue implementation of parse
-   
+  //save val into parse, advance pointer on string by using num chars read, and initialize frac portion to 0
+  val->whole = wholeParse;
+  str += numRead;
+  val->frac = 0;
+
+  //if there is decimal parse frac portion
+  if (*str == '.')
+  {
+    //advance past decimal point and get num chars after decimal in len
+    str++;
+    int len = strlen(str);
+    //can't have more than 8 hex digits
+    if (len > 8)
+      return false;
+
+    unsigned int frac = 0;
+    //parse frac portion
+    if (len > 0 && sscanf(str, "%x", &frac) == 1)
+    {
+      //shift parsed portion into high bits to populate entire frac part (like instructions said)
+      val->frac = frac << (4 * (8 - len));
+    }
+  }
+
+  //if number 0, make it positive
+  if (val->whole == 0 && val->frac == 0)
+  {
+    val->negative = false;
+  }
+
+  return true;
 }
+

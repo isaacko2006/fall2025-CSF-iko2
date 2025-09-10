@@ -72,7 +72,7 @@ addDiffSign (fixpoint_t *result, const fixpoint_t *left, const fixpoint_t *right
 
   if (fracSum < right->frac) {
     fracSum  = (uint32_t)(((uint64_t)fracSum + carry1) - (uint64_t)right->frac);
-    wholeSum -= - 1; //account for subtracting from whole
+    wholeSum -= 1; //account for subtracting from whole
     wholeSum -= right->whole;
   } else {
     fracSum -= right->frac;

@@ -21,6 +21,7 @@ typedef struct {
   fixpoint_t one_third;
   fixpoint_t random_pattern;
   fixpoint_t mid;
+  fixpoint_t one_hundred_neg;
 
 } TestObjs;
 
@@ -135,6 +136,8 @@ TestObjs *setup( void ) {
   TEST_FIXPOINT_INIT( &objs->one_third, 0x55555555u, 0x55555555u, false);
   TEST_FIXPOINT_INIT( &objs->random_pattern, 0x12345666u, 0x9abcdef0u, false);
   TEST_FIXPOINT_INIT( &objs->mid, 0x80000000u,  0x80000000u, false);
+  TEST_FIXPOINT_INIT( &objs->one_hundred_neg, 100, 0, true );
+
   
 
   return objs;
@@ -487,7 +490,7 @@ void test_add_2( TestObjs *objs ) {
 
   ASSERT( fixpoint_add( &result, &objs->mid, &objs->mid ) == RESULT_OVERFLOW );
 
-  ASSERT( fixpoint_add( &result, &objs->min, ))
+  ASSERT( fixpoint_add( &result, &objs->max_neg, &objs->one_hundred_neg) == RESULT_OVERFLOW);
 }
 
 void test_sub_2( TestObjs *objs ) {

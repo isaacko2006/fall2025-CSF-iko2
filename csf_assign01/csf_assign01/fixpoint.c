@@ -445,6 +445,12 @@ bool fixpoint_parse_hex(fixpoint_t *val, const fixpoint_str_t *s)
     }
   }
 
+  //reject -0
+  if (val->whole == 0 && val->frac == 0 && val->negative)
+    {
+        return false;   
+    }
+
   // if number 0, make it positive
   if (val->whole == 0 && val->frac == 0)
   {

@@ -343,6 +343,11 @@ bool fixpoint_parse_hex(fixpoint_t *val, const fixpoint_str_t *s)
     return false;
   }
 
+  //can't have more than 8 hex digits
+  if (numRead > 8) {
+    return false;
+  }
+
   //save val into parse, advance pointer on string by using num chars read, and initialize frac portion to 0
   val->whole = wholeParse;
   str += numRead;

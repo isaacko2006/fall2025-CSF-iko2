@@ -387,22 +387,32 @@ bool fixpoint_parse_hex(fixpoint_t *val, const fixpoint_str_t *s)
   // variables to hold parsed whole portion as well as num read characters
   unsigned int wholeParse = 0;
   int numRead = 0;
-  //%n tracks hex digits like instructions said
-  if (sscanf(str, "%x%n", &wholeParse, &numRead) != 1)
+
+  if (*str != '.')
   {
-    // parse failed
-    return false;
+    //%n tracks hex digits like instructions said
+    if (sscanf(str, "%x%n", &wholeParse, &numRead) != 1)
+    {
+      // parse failed
+      return false;
+    }
+
+    // can't have more than 8 hex digits
+    if (numRead > 8)
+    {
+      return false;
+    }
+
+    // save val into parse, advance pointer on string by using num chars read, and initialize frac portion to 0
+    val->whole = wholeParse;
+    str += numRead;
+  }
+  else
+  {
+    //no digits before decimal makes whole 0
+    val->whole = 0;
   }
 
-  // can't have more than 8 hex digits
-  if (numRead > 8)
-  {
-    return false;
-  }
-
-  // save val into parse, advance pointer on string by using num chars read, and initialize frac portion to 0
-  val->whole = wholeParse;
-  str += numRead;
   val->frac = 0;
 
   // if there is decimal parse frac portion

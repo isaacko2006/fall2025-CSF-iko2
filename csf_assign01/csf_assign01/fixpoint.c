@@ -217,6 +217,10 @@ fixpoint_mul(fixpoint_t *result, const fixpoint_t *left, const fixpoint_t *right
   bool resultSign = (left->negative != right->negative);
   result->negative = resultSign;
 
+  if (middleHigh >> 32 && (lowProduct & 0xFFFFFFFF) != 0) {
+    return RESULT_OVERFLOW | RESULT_UNDERFLOW;
+  }
+
   //if high middle bits are nonzero, overflow
   if (middleHigh >> 32)
   {
@@ -228,6 +232,7 @@ fixpoint_mul(fixpoint_t *result, const fixpoint_t *left, const fixpoint_t *right
   {
     return RESULT_UNDERFLOW;
   }
+
   //true zero cannot be negative
   if (result->whole == 0 && result->frac == 0) {
     result->negative = false;

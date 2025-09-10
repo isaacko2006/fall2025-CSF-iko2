@@ -424,15 +424,9 @@ bool fixpoint_parse_hex(fixpoint_t *val, const fixpoint_str_t *s)
     unsigned int frac = 0;
     int fracDigitsRead = 0;
 
-    if (*str != '\0')
+    // parse frac portion only if present
+    if (*str != '\0' && sscanf(str, "%x%n", &frac, &fracDigitsRead) == 1)
     {
-      // parse frac portion
-      if (sscanf(str, "%x%n", &frac, &fracDigitsRead) != 1)
-      {
-        // fails if decimal but no digits
-        return false;
-      }
-
       // can't have more than 8 hex digits
       if (fracDigitsRead > 8)
       {

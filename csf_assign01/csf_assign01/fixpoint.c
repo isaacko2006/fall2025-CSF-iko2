@@ -359,11 +359,17 @@ bool fixpoint_parse_hex(fixpoint_t *val, const fixpoint_str_t *s)
       return false;
 
     unsigned int frac = 0;
+    int fracDigitsRead;
     //parse frac portion
-    if (len > 0 && sscanf(str, "%x", &frac) == 1)
+    if (len > 0 && sscanf(str, "%x%n", &frac, &fracDigitsRead) == 1)
     {
       //shift parsed portion into high bits to populate entire frac part (like instructions said)
       val->frac = frac << (4 * (8 - len));
+      str += fracDigitsRead;
+    }
+    //fail parse if extra chars after frac portion
+    if (*str != '\0') {
+      return false;
     }
   }
 

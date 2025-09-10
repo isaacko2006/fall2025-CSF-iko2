@@ -409,7 +409,7 @@ bool fixpoint_parse_hex(fixpoint_t *val, const fixpoint_str_t *s)
   }
   else
   {
-    //no digits before decimal makes whole 0
+    // no digits before decimal makes whole 0
     val->whole = 0;
   }
 
@@ -423,22 +423,26 @@ bool fixpoint_parse_hex(fixpoint_t *val, const fixpoint_str_t *s)
 
     unsigned int frac = 0;
     int fracDigitsRead = 0;
-    // parse frac portion
-    if (sscanf(str, "%x%n", &frac, &fracDigitsRead) != 1)
-    {
-      // fails if decimal but no digits
-      return false;
-    }
 
-    // can't have more than 8 hex digits
-    if (fracDigitsRead > 8)
+    if (*str != '\0')
     {
-      return false;
-    }
+      // parse frac portion
+      if (sscanf(str, "%x%n", &frac, &fracDigitsRead) != 1)
+      {
+        // fails if decimal but no digits
+        return false;
+      }
 
-    // shift parsed portion into high bits to populate entire frac part (like instructions said)
-    val->frac = frac << (4 * (8 - fracDigitsRead));
-    str += fracDigitsRead;
+      // can't have more than 8 hex digits
+      if (fracDigitsRead > 8)
+      {
+        return false;
+      }
+
+      // shift parsed portion into high bits to populate entire frac part (like instructions said)
+      val->frac = frac << (4 * (8 - fracDigitsRead));
+      str += fracDigitsRead;
+    }
 
     // fail parse if extra chars after frac portion
     if (*str != '\0')

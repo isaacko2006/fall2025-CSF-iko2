@@ -424,6 +424,11 @@ bool fixpoint_parse_hex(fixpoint_t *val, const fixpoint_str_t *s)
       return false;
     }
 
+    if (numRead > 1 && *s->str == '0' && s->str[1] != '.' && s->str[1] != '\0')
+    {
+      return false;
+    }
+
     // save val into parse, advance pointer on string by using num chars read, and initialize frac portion to 0
     val->whole = wholeParse;
     str += numRead;
@@ -456,6 +461,12 @@ bool fixpoint_parse_hex(fixpoint_t *val, const fixpoint_str_t *s)
 
       // shift parsed portion into high bits to populate entire frac part (like instructions said)
       val->frac = frac << (4 * (8 - fracDigitsRead));
+
+      if (fracDigitsRead > 1 && str[fracDigitsRead - 1] == '0')
+      {
+        return false;
+      } 
+
       str += fracDigitsRead;
     }
 
@@ -464,6 +475,8 @@ bool fixpoint_parse_hex(fixpoint_t *val, const fixpoint_str_t *s)
     {
       return false;
     }
+  } else {
+    return false;
   }
 
   //reject -0

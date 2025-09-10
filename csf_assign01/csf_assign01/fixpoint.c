@@ -40,7 +40,6 @@ result_t
 addSameSign(fixpoint_t *result, const fixpoint_t *left, const fixpoint_t *right)
 {
   uint32_t fracSum = left->frac;
-  uint32_t wholeSum = left->whole;
   bool carry1;
   // check for overflow potential
   if (fracSum > UINT32_MAX - right->frac)
@@ -97,8 +96,16 @@ addDiffSign(fixpoint_t *result, const fixpoint_t *left, const fixpoint_t *right)
     result->negative = 0;
   }
 
+  /*
+  if (fracSum >> 32 != 0 || wholeSum >> 32 != 0)
+  {
+    return RESULT_OVERFLOW;
+  }
+  */
+ 
   result->whole = wholeSum;
   result->frac = fracSum;
+
   return RESULT_OK;
 }
 
@@ -382,6 +389,19 @@ bool fixpoint_parse_hex(fixpoint_t *val, const fixpoint_str_t *s)
   {
     val->negative = true;
     str++;
+
+    if (*str == '-') {
+      return false;
+    }
+  }
+
+  if (*str == ' ') {
+    return false;
+  }
+
+  //check if there are '-' anywhere
+  if (strchr(str, '-') != NULL) {
+    return false;
   }
 
   // variables to hold parsed whole portion as well as num read characters
@@ -390,6 +410,7 @@ bool fixpoint_parse_hex(fixpoint_t *val, const fixpoint_str_t *s)
 
   if (*str != '.')
   {
+
     //%n tracks hex digits like instructions said
     if (sscanf(str, "%x%n", &wholeParse, &numRead) != 1)
     {

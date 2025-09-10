@@ -204,7 +204,7 @@ fixpoint_mul(fixpoint_t *result, const fixpoint_t *left, const fixpoint_t *right
 
   //recombine to get middle 64 bits split into low and high
   uint64_t middleLow = (lowProduct >> 32) + (lowHighProduct & 0xFFFFFFFF) + (highLowProduct & 0xFFFFFFFF);
-  uint64_t middleHigh = (lowProduct >> 64) + (lowHighProduct >> 32) + (highLowProduct >> 32) + highProduct;
+  uint64_t middleHigh = (lowHighProduct >> 32) + (highLowProduct >> 32) + highProduct;
 
   //combine low and high of middle bits to get 64 bit middle portion
   uint64_t middle64 = (middleHigh << 32) | (middleLow & 0xFFFFFFFF);
@@ -214,12 +214,8 @@ fixpoint_mul(fixpoint_t *result, const fixpoint_t *left, const fixpoint_t *right
   result->frac = (uint32_t)(middle64 & 0xFFFFFFFF);
 
   //determine sign of product
-  result->negative = (left->negative != right->negative);
-  //make sure 0 isn't negative
-  if (result->whole == 0 && result->frac == 0)
-  {
-    result->negative = false; 
-  }
+  bool resultSign = (left->negative != right->negative);
+  result->negative = resultSign;
 
   //if high middle bits are nonzero, overflow
   if (middleHigh >> 32)
@@ -231,6 +227,10 @@ fixpoint_mul(fixpoint_t *result, const fixpoint_t *left, const fixpoint_t *right
   if ((lowProduct & 0xFFFFFFFF) != 0)
   {
     return RESULT_UNDERFLOW;
+  }
+  //true zero cannot be negative
+  if (result->whole == 0 && result->frac == 0) {
+    result->negative = false;
   }
 
   return RESULT_OK;

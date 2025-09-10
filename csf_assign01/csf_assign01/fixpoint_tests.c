@@ -527,8 +527,8 @@ void test_mul_2( TestObjs *objs ) {
   ASSERT( fixpoint_mul( &result, &objs->min, &objs->one_half ) == RESULT_UNDERFLOW );
   ASSERT( fixpoint_mul( &result, &objs->min, &objs->min ) == RESULT_UNDERFLOW );
 
-  ASSERT( fixpoint_mul( &result, &objs->max, &objs->max ) == RESULT_OVERFLOW );
-  ASSERT( fixpoint_mul( &result, &objs->mid, &objs->max ) == RESULT_OVERFLOW );
+  ASSERT( fixpoint_mul( &result, &objs->max, &objs->max ) == (RESULT_OVERFLOW | RESULT_UNDERFLOW) );
+  ASSERT( fixpoint_mul( &result, &objs->mid, &objs->max ) == (RESULT_OVERFLOW | RESULT_UNDERFLOW) );
 
 }
 

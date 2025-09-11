@@ -457,7 +457,7 @@ bool fixpoint_parse_hex(fixpoint_t *val, const fixpoint_str_t *s)
       if (fracDigitsRead > 8)
       {
         return false;
-      }
+      } 
 
       // shift parsed portion into high bits to populate entire frac part (like instructions said)
       val->frac = frac << (4 * (8 - fracDigitsRead));

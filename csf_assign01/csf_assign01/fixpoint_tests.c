@@ -22,6 +22,9 @@ typedef struct {
   fixpoint_t random_pattern;
   fixpoint_t mid;
   fixpoint_t one_hundred_neg;
+  fixpoint_t whole_max;
+  fixpoint_t min_neg;
+  fixpoint_t min_pos;
 
 } TestObjs;
 
@@ -137,6 +140,9 @@ TestObjs *setup( void ) {
   TEST_FIXPOINT_INIT( &objs->random_pattern, 0x12345666u, 0x9abcdef0u, false);
   TEST_FIXPOINT_INIT( &objs->mid, 0x80000000u,  0x80000000u, false);
   TEST_FIXPOINT_INIT( &objs->one_hundred_neg, 100, 0, true );
+  TEST_FIXPOINT_INIT( &objs->whole_max, 0xFFFFFFFF, 0, false );
+  TEST_FIXPOINT_INIT( &objs->min_neg, 0, 0x00000001, true);
+  TEST_FIXPOINT_INIT( &objs->min_pos, 0, 0x00000001, false);
 
   
 
@@ -487,18 +493,24 @@ void test_sub_2( TestObjs *objs ) {
 
   fixpoint_t result;
 
-  ASSERT( fixpoint_sub( &result, &objs->mid, &objs->max_neg) == RESULT_OVERFLOW );
-  ASSERT( result.whole == 0xFFFFFFFFu );
-  ASSERT( result.frac  == 0xFFFFFFFFu );
+  ASSERT( fixpoint_sub( &result, &objs->random_pattern, &objs->neg_one_fourth ) == RESULT_OK );
+  ASSERT( result.frac == 0xdabcdef0 );
+  ASSERT( result.whole == 0x12345666 );
   ASSERT( result.negative == false );
 
+  ASSERT( fixpoint_sub( &result, &objs->neg_three_eighths, &objs->one_half ) == RESULT_OK );
+  ASSERT( result.frac == 0xe0000000 );
+  ASSERT( result.whole == 0x00000000 );
+  ASSERT( result.negative == true );
+
+  ASSERT( fixpoint_sub( &result, &objs->mid, &objs->mid) == RESULT_OK);
+  ASSERT( result.frac == 0x00000000 );
+  ASSERT( result.whole == 0x00000000 );
+  ASSERT( result.negative == false );
+
+  ASSERT( fixpoint_sub( &result, &objs->mid, &objs->max_neg) == RESULT_OVERFLOW );
   ASSERT( fixpoint_sub( &result, &objs->max, &objs->max_neg) == RESULT_OVERFLOW );
 
-
-  ASSERT( fixpoint_sub( &result, &objs->mid, &objs->mid) == RESULT_OVERFLOW);
-  ASSERT( result.whole == 0x00000000u );
-  ASSERT( result.frac  == 0x00000000u );
-  ASSERT( result.negative == false );
 }
 
 void test_mul_2( TestObjs *objs ) {
@@ -506,24 +518,27 @@ void test_mul_2( TestObjs *objs ) {
   fixpoint_t result;
 
   ASSERT( fixpoint_mul( &result, &objs->min, &objs->one_half ) == RESULT_UNDERFLOW );
-  ASSERT( result.whole == 0x00000000u );
-  ASSERT( result.frac  == 0x00000000u );
-  ASSERT( result.negative == false );
 
   ASSERT( fixpoint_mul( &result, &objs->min, &objs->min ) == RESULT_UNDERFLOW );
-  ASSERT( result.frac  == 0x00000000u );
-  ASSERT( result.frac  == 0x00000000u );
+
+  ASSERT( fixpoint_mul( &result, &objs->max, &objs->whole_max) == RESULT_OVERFLOW);
+
+  ASSERT( fixpoint_mul( &result, &objs->min_neg, &objs->min_pos) == RESULT_UNDERFLOW);
+  ASSERT( result.negative == true );
+  
+  ASSERT( fixpoint_mul( &result, &objs->whole_max, &objs->whole_max) == RESULT_OVERFLOW);
   ASSERT( result.negative == false );
 
   ASSERT( fixpoint_mul( &result, &objs->max, &objs->max ) == (RESULT_OVERFLOW | RESULT_UNDERFLOW) );
-  ASSERT( result.whole == 0xFFFFFFFEu );
-  ASSERT( result.frac  == 0x00000000u );
-  ASSERT( result.negative == false );
 
   ASSERT( fixpoint_mul( &result, &objs->mid, &objs->max ) == (RESULT_OVERFLOW | RESULT_UNDERFLOW) );
-  ASSERT( result.whole == 0x7FFFFFFFu );
-  ASSERT( result.frac  == 0x7FFFFFFFu );
+
+  ASSERT( fixpoint_mul( &result, &objs->zero, &objs->zero) == RESULT_OK );
   ASSERT( result.negative == false );
+
+
+
+  
 }
 
 void test_compare_2( TestObjs *objs ) {
@@ -545,7 +560,13 @@ void test_format_hex_2( TestObjs *objs ) {
   ASSERT( strcmp("12345666.9abcdef", s.str) == 0 );
 
   fixpoint_format_hex(&s, &objs->random_pattern );
+  ASSERT( strcmp("0.0", s.str) != 0 );
+
+  fixpoint_format_hex(&s, &objs->random_pattern );
   ASSERT( strcmp("12345666.9abcdef", s.str) == 0 );
+
+  fixpoint_format_hex(&s, &objs->random_pattern );
+  ASSERT( strcmp("gavin", s.str) != 0 );
 
   fixpoint_format_hex(&s, &objs->one_third );
   ASSERT( strcmp("55555555.55555555", s.str) == 0 );
@@ -572,6 +593,8 @@ void test_parse_hex_2( TestObjs *objs ) {
   //check string too long
   ASSERT( false == fixpoint_parse_hex( &val, FIXPOINT_STR("fffffffff.ffffffff")));
   ASSERT( false == fixpoint_parse_hex( &val, FIXPOINT_STR( "0.000000000" ) ) );
+
+  ASSERT( false == fixpoint_parse_hex ( &val, FIXPOINT_STR("1.200")));
 
   //check for spaces
   ASSERT( false == fixpoint_parse_hex( &val, FIXPOINT_STR( "3.5 " ) ) );

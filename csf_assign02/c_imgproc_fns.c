@@ -61,8 +61,8 @@ int imgproc_transpose( struct Image *input_img, struct Image *output_img ) {
     return 0;
   }
 
-  for (int i = 0; i < width; i ++) {
-    for (int j = 0; j < height; j++) {
+  for (int i = 0; i < height; i ++) {
+    for (int j = 0; j < width; j++) {
       int inputIdx = i * width + j;
       int outputIdx = j * height + i;
       output_img->data[outputIdx] = input_img->data[inputIdx];
@@ -92,7 +92,23 @@ int imgproc_transpose( struct Image *input_img, struct Image *output_img ) {
 //! @param output_img pointer to the output Image (in which the
 //!                   transformed pixels should be stored)
 void imgproc_ellipse( struct Image *input_img, struct Image *output_img ) {
-  // TODO: implement
+  int height = input_img->height;
+  int width = input_img->width;
+  int a = width / 2;
+  int b = height / 2;
+
+  for (int i = 0; i < height; i ++) {
+    for (int j = 0; j < width; j++) {
+      int x = i - a;
+      int y = j - b;
+
+      if ((10000*x*x)/(a*a)+(((10000*y*y)/(b*b)) < 10000)) {
+        output_img->data[i * width + height] = input_img->data[i * width + height];
+      } else {
+        output_img->data[j * width + height] = 0xFF000000;
+      }
+    }
+  }
 }
 
 //! Transform the input image using an "emboss" effect. The pixels

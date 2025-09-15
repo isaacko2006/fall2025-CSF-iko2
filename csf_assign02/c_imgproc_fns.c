@@ -16,7 +16,26 @@
 //! @param output_img pointer to the output Image (in which the
 //!                   transformed pixels should be stored)
 void imgproc_complement( struct Image *input_img, struct Image *output_img ) {
-  // TODO: implement
+  uint32_t totalPixels = input_img->width * input_img->height;
+  
+  //parse through total pixels
+  for (int i = 0; i < totalPixels; i++) {
+    uint32_t pixel = input_img->data[i];
+
+    //isolate all the colors
+    uint8_t red = (pixel >> 24);
+    uint8_t green = (pixel >> 16);
+    uint8_t blue = (pixel >> 8);
+    uint8_t alpha = pixel & 0xFF;
+
+    red = ~red;
+    blue = ~blue;
+    green = ~green;
+
+    //create output
+    output_img->data[i] = (((uint32_t)red << 24) |((uint32_t)green << 16) | 
+      ((uint32_t)blue << 8)  | (uint32_t)alpha);
+  }
 }
 
 //! Transform the input image by swapping the row and column
@@ -34,7 +53,22 @@ void imgproc_complement( struct Image *input_img, struct Image *output_img ) {
 //!         transformation can't be applied because the image
 //!         width and height are not the same
 int imgproc_transpose( struct Image *input_img, struct Image *output_img ) {
-  // TODO: implement
+  int height = input_img->height;
+  int width = input_img->width;
+  uint32_t totalPixels = input_img->width * input_img->height;
+
+  if (height != width) {
+    return 0;
+  }
+
+  for (int i = 0; i < width; i ++) {
+    for (int j = 0; j < height; j++) {
+      int inputIdx = i * width + j;
+      int outputIdx = j * height + i;
+      output_img->data[outputIdx] = input_img->data[inputIdx];
+    }
+  }
+
   return 1;
 }
 

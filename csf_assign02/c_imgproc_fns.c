@@ -4,13 +4,12 @@
 #include <assert.h>
 #include "imgproc.h"
 
-// TODO: define your helper functions here
 uint8_t emboss_gray(uint32_t pixel, uint32_t pixel_upperleft)
 {
   //compute differences: diffr = nr-r, diffg = ng - g, diffb = nb - b
-  int32_t r = (pixel >> 24) & 0xFF;
-  int32_t g = (pixel >> 16) & 0xFF;
-  int32_t b = (pixel >> 8) & 0xFF;
+  int32_t r = get_r(pixel);
+  int32_t g = get_g(pixel);
+  int32_t b = get_b(pixel);
 
   int32_t nr = (pixel_upperleft >> 24) & 0xFF;
   int32_t ng = (pixel_upperleft >> 16) & 0xFF;
@@ -43,6 +42,26 @@ uint8_t emboss_gray(uint32_t pixel, uint32_t pixel_upperleft)
   return (uint8_t)gray;
 }
 
+uint32_t get_r( uint32_t pixel ) {
+  uint32_t r = (pixel >> 24) & 0xFF;
+  return r;
+}
+
+uint32_t get_g( uint32_t pixel ) {
+  uint32_t g = (pixel >> 16) & 0xFF;
+  return g;
+}
+
+uint32_t get_b( uint32_t pixel ) {
+  uint32_t b = (pixel >> 8) & 0xFF;
+  return b;
+}
+
+uint32_t get_a( uint32_t pixel ) {
+  uint32_t alpha = pixel & 0xFF;
+  return alpha;
+}
+
 //! Transform the color component values in each input pixel
 //! by applying the bitwise complement operation. I.e., each bit
 //! in the color component information should be inverted
@@ -62,18 +81,20 @@ void imgproc_complement(struct Image *input_img, struct Image *output_img)
     uint32_t pixel = input_img->data[i];
 
     // isolate all the colors
-    uint8_t red = (pixel >> 24);
-    uint8_t green = (pixel >> 16);
-    uint8_t blue = (pixel >> 8);
-    uint8_t alpha = pixel & 0xFF;
+    uint32_t red = get_r(pixel);
+    uint32_t green = get_g(pixel);
+    uint32_t blue = get_b(pixel);
+    uint32_t alpha = get_a(pixel);
 
-    red = ~red;
-    blue = ~blue;
-    green = ~green;
+    red = (~red) & 0xFF;
+    blue = (~blue) & 0xFF;
+    green = (~green) & 0xFF;
 
     // create output
-    output_img->data[i] = (((uint32_t)red << 24) | ((uint32_t)green << 16) |
-                           ((uint32_t)blue << 8) | (uint32_t)alpha);
+    output_img->data[i] = ((red   << 24) |
+     (green << 16) |
+     (blue  << 8)  |
+     alpha);
   }
 }
 

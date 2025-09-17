@@ -86,6 +86,25 @@ void imgproc_ellipse( struct Image *input_img, struct Image *output_img );
 //!                   transformed pixels should be stored)
 void imgproc_emboss( struct Image *input_img, struct Image *output_img );
 
-// TODO: add prototypes for your helper functions
+
+//! fill out later
+uint8_t emboss_gray(uint32_t pixel, uint32_t pixel_upperleft);
+
+//! Returns the value of the red part of the bit
+//! @param pixel to acquire the red part
+uint32_t get_r( uint32_t pixel );
+
+//! Returns the value of the green part of the bit
+//! @param pixel to acquire the green part
+uint32_t get_g( uint32_t pixel );
+
+//! Returns the value of the blue part of the bit
+//! @param pixel to acquire the blue part
+uint32_t get_b( uint32_t pixel );
+
+//! Returns the value of the alpha part of the bit
+//! @param pixel to acquire the alpga part
+uint32_t get_a( uint32_t pixel );
+
 
 #endif // IMGPROC_H

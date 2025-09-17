@@ -95,12 +95,14 @@ int imgproc_transpose(struct Image *input_img, struct Image *output_img)
 {
   int height = input_img->height;
   int width = input_img->width;
-  uint32_t totalPixels = input_img->width * input_img->height;
 
   if (height != width)
   {
     return 0;
   }
+
+  output_img->width  = width;
+  output_img->height = height;
 
   for (int i = 0; i < height; i++)
   {
@@ -145,16 +147,16 @@ void imgproc_ellipse(struct Image *input_img, struct Image *output_img)
   {
     for (int j = 0; j < width; j++)
     {
-      int x = i - a;
-      int y = j - b;
+      int x = j - a;
+      int y = i - b;
 
-      if ((10000 * x * x) / (a * a) + (((10000 * y * y) / (b * b)) < 10000))
+      if (((10000 * x * x) / (a * a)) + ((10000 * y * y) / (b * b)) <= 10000)
       {
-        output_img->data[i * width + height] = input_img->data[i * width + height];
+        output_img->data[i * width + j] = input_img->data[i * width + j];
       }
       else
       {
-        output_img->data[j * width + height] = 0xFF000000;
+        output_img->data[i * width + j] = 0x000000FF;
       }
     }
   }

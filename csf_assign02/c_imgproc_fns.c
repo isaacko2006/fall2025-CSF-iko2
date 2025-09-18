@@ -6,34 +6,33 @@
 
 uint8_t emboss_gray(uint32_t pixel, uint32_t pixel_upperleft)
 {
-  //compute differences: diffr = nr-r, diffg = ng - g, diffb = nb - b
+  // compute differences: diffr = nr-r, diffg = ng - g, diffb = nb - b
   int32_t r = get_r(pixel);
   int32_t g = get_g(pixel);
   int32_t b = get_b(pixel);
 
-  int32_t nr = (pixel_upperleft >> 24) & 0xFF;
-  int32_t ng = (pixel_upperleft >> 16) & 0xFF;
-  int32_t nb = (pixel_upperleft >> 8) & 0xFF;
+  int32_t nr = get_r(pixel_upperleft);
+  int32_t ng = get_g(pixel_upperleft);
+  int32_t nb = get_b(pixel_upperleft);
 
   int32_t diffr = nr - r;
   int32_t diffg = ng - g;
   int32_t diffb = nb - b;
 
-  //priority - red,green,blue
+  // priority - red,green,blue
   int32_t diff = diffr;
-  if (abs(diffg) > abs(diff) || (abs(diffg) == abs(diff) && diff == diffr))
+  if (abs(diffg) > abs(diff) || (abs(diffg) == abs(diff) && diff != diffr))
   {
     diff = diffg;
   }
-  if (abs(diffb) > abs(diff) ||
-      (abs(diffb) == abs(diff) && diff != diffr && diff == diffg))
+  if (abs(diffb) > abs(diff) || (abs(diffb) == abs(diff) && diff != diffr && diff != diffg))
   {
     diff = diffb;
   }
 
-  //gray is 128 + diff
+  // gray is 128 + diff
   int32_t gray = 128 + diff;
-  //must be clamped within range of 0-255
+  // must be clamped within range of 0-255
   if (gray < 0)
     gray = 0;
   if (gray > 255)
@@ -42,22 +41,26 @@ uint8_t emboss_gray(uint32_t pixel, uint32_t pixel_upperleft)
   return (uint8_t)gray;
 }
 
-uint32_t get_r( uint32_t pixel ) {
+uint32_t get_r(uint32_t pixel)
+{
   uint32_t r = (pixel >> 24) & 0xFF;
   return r;
 }
 
-uint32_t get_g( uint32_t pixel ) {
+uint32_t get_g(uint32_t pixel)
+{
   uint32_t g = (pixel >> 16) & 0xFF;
   return g;
 }
 
-uint32_t get_b( uint32_t pixel ) {
+uint32_t get_b(uint32_t pixel)
+{
   uint32_t b = (pixel >> 8) & 0xFF;
   return b;
 }
 
-uint32_t get_a( uint32_t pixel ) {
+uint32_t get_a(uint32_t pixel)
+{
   uint32_t alpha = pixel & 0xFF;
   return alpha;
 }
@@ -91,10 +94,10 @@ void imgproc_complement(struct Image *input_img, struct Image *output_img)
     green = (~green) & 0xFF;
 
     // create output
-    output_img->data[i] = ((red   << 24) |
-     (green << 16) |
-     (blue  << 8)  |
-     alpha);
+    output_img->data[i] = ((red << 24) |
+                           (green << 16) |
+                           (blue << 8) |
+                           alpha);
   }
 }
 
@@ -122,7 +125,7 @@ int imgproc_transpose(struct Image *input_img, struct Image *output_img)
     return 0;
   }
 
-  output_img->width  = width;
+  output_img->width = width;
   output_img->height = height;
 
   for (int i = 0; i < height; i++)
@@ -223,27 +226,27 @@ void imgproc_emboss(struct Image *input_img, struct Image *output_img)
   {
     for (int col = 0; col < width; col++)
     {
-      //calculate index from flattened array
+      // calculate index from flattened array
       int idx = row * width + col;
       uint32_t pixel = input_img->data[idx];
       uint32_t a = pixel & 0xFF;
 
-      //checks for top row or left column
+      // checks for top row or left column
       if (row == 0 || col == 0)
       {
-        //make pixel gray
+        // make pixel gray
         uint32_t gray = 128;
         output_img->data[idx] = (gray << 24) | (gray << 16) | (gray << 8) | a;
       }
       else
       {
-        //find top left neighboring index using flattened array calculation
+        // find top left neighboring index using flattened array calculation
         int neighbor = (row - 1) * width + (col - 1);
         uint32_t neighborpixel = input_img->data[neighbor];
 
-        //use helper function to find how much brighter/darker pixel should be compared to neighbor
+        // use helper function to find how much brighter/darker pixel should be compared to neighbor
         uint8_t gray = emboss_gray(pixel, neighborpixel);
-        //create pixel with gray color from emboss_gray function
+        // create pixel with gray color from emboss_gray function
         output_img->data[idx] = (gray << 24) | (gray << 16) | (gray << 8) | a;
       }
     }

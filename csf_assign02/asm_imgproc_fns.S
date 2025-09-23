@@ -33,7 +33,8 @@
  */
 	.globl imgproc_complement
 imgproc_complement:
-	/* TODO: implement */
+	//todo list
+	
 	ret
 
 /*

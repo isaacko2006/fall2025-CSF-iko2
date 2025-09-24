@@ -15,9 +15,9 @@
  *  %edi - pixel
  */
 	.globl imgproc_complement
-get_red: 
+get_r: 
 	movl %edi, %eax
-	# shift pixels down by 24
+	/* shift the pixels down by 24 to isolate the red pixels */
 	shrl $24, %eax
 	andl $0xFF, %eax
 	ret
@@ -28,9 +28,9 @@ get_red:
  *  %edi - pixel
  */
 	.globl imgproc_complement
-get_green: 
+get_g: 
 	movl %edi, %eax
-	# shift pixels down by 16
+	/* shift the pixels down by 16 to isolate the green pixels */
 	shrl $16, %eax
 	andl $0xFF, %eax
 	ret
@@ -41,9 +41,9 @@ get_green:
  *  %edi - pixel
  */
 	.globl imgproc_complement
-get_blue: 
+get_b: 
 	movl %edi, %eax
-	# shift pixels down by 8
+	/* shift the pixels down by 8 to isolate the blue pixels */
 	shrl $8, %eax
 	andl $0xFF, %eax
 	ret
@@ -54,8 +54,9 @@ get_blue:
  *  %edi - pixel
  */
 	.globl imgproc_complement
-get_alpha: 
+get_a: 
 	movl %edi, %eax
+	/* Don't need to shift anything for the alpha pixels */
 	andl $0xFF, %eax
 	ret
 
@@ -78,58 +79,77 @@ get_alpha:
  */
 	.globl imgproc_complement
 imgproc_complement:
+	/* Registers used:
+	 * %r8d = total pixels
+	 * %r9 = pointer to input->data
+	 * %r10 = pointer to output->data
+	 * %r11d = loop counter
+     * %edx  = at first, used to track current pixel but later tracks alpha pixel
+     * %ecx  = red pixels
+     * %esi  = green pixels
+     * %ebx  = blue pixels
+	*/
+
+	/* for this implementation, we will use only caller saved registers */
 	pushq %rbp
 	movq %rsp, %rbp
 	
-	#get width and height
+	/* get width and height */
 	movl (%rdi), %eax
+	/* offset for four to get the height */
 	movl 4(%rdi), %ecx 
-	//find total pixels
+	/* multiply height and width to find total pixel count */
 	imull %ecx, %eax 
 	movl %eax, %r8d #r8d now holds the total number of pixels
 
-	# move image pointers to different register
+	/* move image pointers to different register */
 	movq 8(%rdi), %r9
 	movq 8(%rsi), %r10
 	
 	xorl %r11d, %r11d #set the counter for the loop index
 
 .Ltop: 
-	#break the loop once total pixels are accounted for
+	/* break the loop once total pixels are accounted for */
 	cmpl %eax, %r11d
-	jge .done
+	jge .Lbottom
 
-	movl (%r9, %r11, 4), %edx #isolate a single pixel
-
-	movl %edx, %edi
-	call get_red
-	movl %eax, %ecx #ecx holds r
+	/* isolate a single pixel, r9 + r11 * 4 gives index */
+	movl (%r9, %r11, 4), %edx 
 
 	movl %edx, %edi
-	call get_green
-	movl %eax, %esi #esi holds g
+	call get_r
+	movl %eax, %ecx /* edx holds the red pixel */
 
 	movl %edx, %edi
-	call get_blue
-	movl %eax, %ebx #ebx holds b
+	call get_g
+	movl %eax, %esi /* esi holds the green pixel */
 
 	movl %edx, %edi
-	call get_green
-	movl %eax, %edx #edx holds alpha
+	call get_b
+	movl %eax, %ebx /* ebx holds the blue pixel */
 
-	#shift the bits back to the original position
+	movl %edx, %edi
+	call get_a
+	movl %eax, %edx /* edx holds the alpha pixel */
+
+	/* invert the pixels */
+	xorl $0xFF, %ecx
+    xorl $0xFF, %esi
+    xorl $0xFF, %ebx
+
+	/* shift the bits back to the original position */
 	shll $24, %ecx
 	shll $16, %esi
 	shll $8, %ebx
 
-	#assemble the bits together
+	/* assemble the bits together */
 	movl %ecx, %eax
     orl %esi, %eax
     orl %ebx, %eax
     orl %edx, %eax
 
-	#store the pixel back into the output image
-	movl %eax, (%r10,%r11,4)
+	/* store the pixel back into the output image */
+	movl %eax, (%r10,%r11,4) 
 	
 	incl %r11d
     jmp .Ltop

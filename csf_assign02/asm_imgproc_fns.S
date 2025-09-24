@@ -10,10 +10,55 @@
 #define IMAGE_DATA_OFFSET    8
 
 /*
- * TODO: define your helper functions here.
- * Don't forget to use the .globl directive to make
- * them visible to the test code.
+ *  Isolate the red pixel's bits
+ *  Parameters:
+ *  %edi - pixel
  */
+	.globl imgproc_complement
+get_red: 
+	movl %edi, %eax
+	# shift pixels down by 24
+	shrl $24, %eax
+	andl $0xFF, %eax
+	ret
+
+/*
+ *  Isolate the green pixel's bits
+ *  Parameters:
+ *  %edi - pixel
+ */
+	.globl imgproc_complement
+get_green: 
+	movl %edi, %eax
+	# shift pixels down by 16
+	shrl $16, %eax
+	andl $0xFF, %eax
+	ret
+
+/*
+ *  Isolate the blue pixel's bits
+ *  Parameters:
+ *  %edi - pixel
+ */
+	.globl imgproc_complement
+get_blue: 
+	movl %edi, %eax
+	# shift pixels down by 8
+	shrl $8, %eax
+	andl $0xFF, %eax
+	ret
+
+/*
+ *  Isolate the alpha pixel's bits
+ *  Parameters:
+ *  %edi - pixel
+ */
+	.globl imgproc_complement
+get_alpha: 
+	movl %edi, %eax
+	andl $0xFF, %eax
+	ret
+
 
 /*
  * Definitions of image transformation functions
@@ -33,8 +78,64 @@
  */
 	.globl imgproc_complement
 imgproc_complement:
-	//todo list
+	pushq %rbp
+	movq %rsp, %rbp
 	
+	#get width and height
+	movl (%rdi), %eax
+	movl 4(%rdi), %ecx 
+	//find total pixels
+	imull %ecx, %eax 
+	movl %eax, %r8d #r8d now holds the total number of pixels
+
+	# move image pointers to different register
+	movq 8(%rdi), %r9
+	movq 8(%rsi), %r10
+	
+	xorl %r11d, %r11d #set the counter for the loop index
+
+.Ltop: 
+	#break the loop once total pixels are accounted for
+	cmpl %eax, %r11d
+	jge .done
+
+	movl (%r9, %r11, 4), %edx #isolate a single pixel
+
+	movl %edx, %edi
+	call get_red
+	movl %eax, %ecx #ecx holds r
+
+	movl %edx, %edi
+	call get_green
+	movl %eax, %esi #esi holds g
+
+	movl %edx, %edi
+	call get_blue
+	movl %eax, %ebx #ebx holds b
+
+	movl %edx, %edi
+	call get_green
+	movl %eax, %edx #edx holds alpha
+
+	#shift the bits back to the original position
+	shll $24, %ecx
+	shll $16, %esi
+	shll $8, %ebx
+
+	#assemble the bits together
+	movl %ecx, %eax
+    orl %esi, %eax
+    orl %ebx, %eax
+    orl %edx, %eax
+
+	#store the pixel back into the output image
+	movl %eax, (%r10,%r11,4)
+	
+	incl %r11d
+    jmp .Ltop
+
+.Lbottom:
+	popq %rbp
 	ret
 
 /*

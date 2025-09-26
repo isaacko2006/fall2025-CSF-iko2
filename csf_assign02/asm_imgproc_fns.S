@@ -14,6 +14,7 @@
  *  Parameters:
  *  %edi - pixel
  */
+	.globl get_r
 get_r: 
 	movl %edi, %eax
 	/* shift the pixels down by 24 to isolate the red pixels */
@@ -26,6 +27,7 @@ get_r:
  *  Parameters:
  *  %edi - pixel
  */
+ 	.globl get_g
 get_g: 
 	movl %edi, %eax
 	/* shift the pixels down by 16 to isolate the green pixels */
@@ -38,6 +40,7 @@ get_g:
  *  Parameters:
  *  %edi - pixel
  */
+ 	.globl get_b
 get_b: 
 	movl %edi, %eax
 	/* shift the pixels down by 8 to isolate the blue pixels */
@@ -50,10 +53,16 @@ get_b:
  *  Parameters:
  *  %edi - pixel
  */
+	.globl get_a
 get_a: 
 	movl %edi, %eax
 	/* Don't need to shift anything for the alpha pixels */
 	andl $0xFF, %eax
+	ret
+
+	.globl emboss_gray
+emboss_gray:
+	/*TODO*/
 	ret
 
 

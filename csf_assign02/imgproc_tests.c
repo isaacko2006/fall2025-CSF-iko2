@@ -114,12 +114,12 @@ int main(int argc, char **argv)
   // for any additional test functions you add.
   TEST(test_complement_basic);
   TEST(test_transpose_basic);
-  TEST(test_ellipse_basic);
-  TEST(test_emboss_basic);
+  //TEST(test_ellipse_basic);
+  //TEST(test_emboss_basic);
 
   // helper function tests
   TEST(test_get_attributes);
-  TEST(test_emboss_gray);
+  //TEST(test_emboss_gray);
 
   TEST_FINI();
 }

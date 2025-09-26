@@ -94,19 +94,16 @@ imgproc_complement:
 	pushq %rbp
 	movq %rsp, %rbp
 	
-	/* get width and height */
-	movl (%rdi), %eax
-	/* offset for four to get the height */
-	movl 4(%rdi), %ecx 
-	/* multiply height and width to find total pixel count */
-	imull %ecx, %eax 
-	movl %eax, %r8d #r8d now holds the total number of pixels
+	movl (%rdi), %eax 	/* get width and height */
+	movl 4(%rdi), %ecx  	/* offset for four to get the height */
+	imull %ecx, %eax  	/* multiply height and width to find total pixel count */
+	movl %eax, %r8d /* r8d now holds the total number of pixels */
 
-	/* move image pointers to different register */
+	/* move input and output image pointers to different register */
 	movq 8(%rdi), %r9
 	movq 8(%rsi), %r10
 	
-	xorl %r11d, %r11d #set the counter for the loop index
+	xorl %r11d, %r11d /* set the counter for the loop index */
 
 .Ltop: 
 	/* break the loop once total pixels are accounted for */
@@ -130,26 +127,25 @@ imgproc_complement:
 
 	movl %edx, %edi
 	call get_a
-	movl %eax, %edx /* edx holds the alpha pixel */
+	movl %eax, %edx /* edx now holds the alpha pixel */
 
 	/* invert the pixels */
 	xorl $0xFF, %ecx
     xorl $0xFF, %esi
     xorl $0xFF, %ebx
 
-	/* shift the bits back to the original position */
+	/* shift the bits back to the original position by respective bits */
 	shll $24, %ecx
 	shll $16, %esi
 	shll $8, %ebx
 
 	/* assemble the bits together */
-	movl %ecx, %eax
-    orl %esi, %eax
-    orl %ebx, %eax
-    orl %edx, %eax
+	movl %ecx, %eax /* put red into pixel */
+    orl %esi, %eax /* put green into pixel */
+    orl %ebx, %eax /* put blue into pixel */
+    orl %edx, %eax /* put alpha into pixel */
 
-	/* store the pixel back into the output image */
-	movl %eax, (%r10,%r11,4) 
+	movl %eax, (%r10,%r11,4) 	/* store the pixel back into the output image */
 	
 	incl %r11d
     jmp .Ltop
@@ -177,7 +173,78 @@ imgproc_complement:
  */
 	.globl imgproc_transpose
 imgproc_transpose:
-	/* TODO: implement */
+	/* Registers used:
+	 * %eax - width of input
+	 * %ecx - height of input
+	 * %edx - i * width + j (inputIdx equivalent from c implementation)
+	 * %esi - j * height + i (outputIdx equivalent from c implementation)
+	 * ebx - temp var to hold 1 pixel
+	 * %r9 - input->data array
+	 * %r10 - output->data array 
+	 * %r11d - counter for row iteration
+	 * %r12d - counter for col iteration
+	 * %rdx - 64 bit version of edx
+	 */
+
+	/* for this implementation, we will use only caller saved registers */
+	pushq %rbp
+	movq %rsp, %rbp
+	
+	movl (%rdi), %eax /* get width */
+	movl 4(%rdi), %ecx /* offset for four to get the height */
+
+
+	cmpl %ecx, %eax /* check if height != width */
+	jne .height_not_equal_width
+
+	movl %eax, (%rsi) 	/* set output image's width */
+	movl %ecx, 4(%rsi) /* set output image's height */
+
+	movq 8(%rdi), %r9 /* load input->data */
+	movq 8(%rsi), %r10 /* load output->data */
+
+	xorl %r11d, %r11d /*set a counter to zero to track height */
+
+	.row_iterate: /*iterate through the rows */
+		cmpl %ecx, %r11d /* compare counter to the height */
+		jge .exit_loop
+		
+		xorl %r12d, %r12d /*set a counter to zero to track width */
+	.col_iterate: /* iterate through the cols */
+		cmpl %r12d, %eax /* compare counter to width */
+		jge .go_to_next_row
+
+		movl %r11d, %edx /* move row counter to edx */
+		imull %eax, %edx /* multiply width with row counter */
+		addl %r12d, %edx /* add width counter to the above to get i * width + j */
+
+		movl %r12d, %esi /*move width counter to esi */
+		imull %ecx, %esi /* multiply height with width counter */
+		addl %r11d, %esi /* add height counter to the above to get j * height + i */
+
+		movl (%r9, %rdx, 4), %ebx /* set temp variable to input->data[index] */ 
+		/* we use rdx to account for the 64bit index register */
+		movl %ebx, (%r10, %rsi, 4) /* set output->data[index] to the temp variable above */
+		/* we use ebx to account for the 64bit index register */ 
+
+		incl %r12d /* increment the width counter */
+		jmp .col_iterate
+
+	.height_not_equal_width: /* terminate program if height and width are not equal */
+		movl $0, %eax /* the image is not a square, return 0 */
+		popq %rbp
+		ret
+
+	.go_to_next_row:
+		incl %r11d /* increment the height counter */
+		jmp .row_iterate
+	
+	.exit_loop:
+		movl $1, %eax /* loop successful, return 1 */
+		popq %rbp
+		ret
+
+
 	ret
 
 /*

@@ -1,1 +1,3 @@
-./run_all.sh: line 14: ./run_test.rb: Permission denied
+Error: ./c_imgproc exited with a non-zero exit code (1)
+Error output was:
+Error: couldn't read input image

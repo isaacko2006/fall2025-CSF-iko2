@@ -103,7 +103,7 @@ imgproc_complement:
 
 .Ltop: 
 	/* break the loop once total pixels are accounted for */
-	cmpl %eax, %r11d
+	cmpl %r8d, %r11d
 	jge .Lbottom
 
 	/* isolate a single pixel, r9 + r11 * 4 gives index */
@@ -111,7 +111,7 @@ imgproc_complement:
 
 	movl %edx, %edi
 	call get_r
-	movl %eax, %ecx /* edx holds the red pixel */
+	movl %eax, %ecx /* ecx holds the red pixel */
 
 	movl %edx, %edi
 	call get_g
@@ -182,9 +182,12 @@ imgproc_transpose:
 	 * %rdx - 64 bit version of edx
 	 */
 
-	/* for this implementation, we will use only caller saved registers */
+	/* push registers onto stack */
 	pushq %rbp
 	movq %rsp, %rbp
+	pushq %rbx
+	pushq %r12
+
 	
 	movl (%rdi), %eax /* get width */
 	movl 4(%rdi), %ecx /* offset for four to get the height */
@@ -207,7 +210,7 @@ imgproc_transpose:
 		
 		xorl %r12d, %r12d /*set a counter to zero to track width */
 	.col_iterate: /* iterate through the cols */
-		cmpl %r12d, %eax /* compare counter to width */
+		cmpl %eax, %r12d /* compare counter to width */
 		jge .go_to_next_row
 
 		movl %r11d, %edx /* move row counter to edx */
@@ -228,7 +231,10 @@ imgproc_transpose:
 
 	.height_not_equal_width: /* terminate program if height and width are not equal */
 		movl $0, %eax /* the image is not a square, return 0 */
-		popq %rbp
+		movq  %rbp, %rsp     # restore stack pointer to frame base
+    	popq  %r12
+    	popq  %rbx
+    	popq  %rbp
 		ret
 
 	.go_to_next_row:
@@ -237,11 +243,12 @@ imgproc_transpose:
 	
 	.exit_loop:
 		movl $1, %eax /* loop successful, return 1 */
-		popq %rbp
+		movq  %rbp, %rsp
+		popq  %r12
+		popq  %rbx
+		popq  %rbp
 		ret
 
-
-	ret
 
 /*
  *  Transform the input image by copying only those pixels that are

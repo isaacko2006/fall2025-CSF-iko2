@@ -173,13 +173,12 @@ imgproc_transpose:
 	 * %eax - width of input
 	 * %ecx - height of input
 	 * %edx - i * width + j (inputIdx equivalent from c implementation)
-	 * %esi - j * height + i (outputIdx equivalent from c implementation)
 	 * ebx - temp var to hold 1 pixel
 	 * %r9 - input->data array
 	 * %r10 - output->data array 
 	 * %r11d - counter for row iteration
 	 * %r12d - counter for col iteration
-	 * %r13d - 
+	 * %r13d - j * height + i (outputIdx equivalent from c implementation)
 	 * %rdx - 64 bit version of edx
 	 */
 

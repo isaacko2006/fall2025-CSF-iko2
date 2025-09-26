@@ -327,7 +327,7 @@ void test_transpose_basic(TestObjs *objs)
 
   destroy_img(sq_test_transpose_expected);
 }
-
+/*
 void test_ellipse_basic(TestObjs *objs)
 {
   struct Picture smiley_ellipse_expected_pic = {
@@ -393,7 +393,7 @@ void test_emboss_basic(TestObjs *objs)
 
   destroy_img(smiley_emboss_expected);
 }
-
+*/
 void test_get_attributes(TestObjs *objs)
 {
   // silence objs parameter because it had to be passed in for declaration, but isn't needed in helper

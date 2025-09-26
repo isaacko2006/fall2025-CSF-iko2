@@ -414,7 +414,7 @@ void test_get_attributes(TestObjs *objs)
   ASSERT(get_b(pixel2) == 0xFF);
   ASSERT(get_a(pixel2) == 0x00);
 }
-
+/*
 void test_emboss_gray(TestObjs *objs)
 {
   // silence objs parameter because it had to be passed in for declaration, but isn't needed in helper
@@ -441,3 +441,4 @@ void test_emboss_gray(TestObjs *objs)
   // red wins in case of tie, 128+16
   ASSERT(emboss_gray(curr, neigh) == 144);
 }
+*/

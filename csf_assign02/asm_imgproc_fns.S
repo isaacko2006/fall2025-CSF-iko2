@@ -179,6 +179,7 @@ imgproc_transpose:
 	 * %r10 - output->data array 
 	 * %r11d - counter for row iteration
 	 * %r12d - counter for col iteration
+	 * %r13d - 
 	 * %rdx - 64 bit version of edx
 	 */
 
@@ -187,6 +188,7 @@ imgproc_transpose:
 	movq %rsp, %rbp
 	pushq %rbx
 	pushq %r12
+	pushq %r13
 
 	
 	movl (%rdi), %eax /* get width */
@@ -217,13 +219,13 @@ imgproc_transpose:
 		imull %eax, %edx /* multiply width with row counter */
 		addl %r12d, %edx /* add width counter to the above to get i * width + j */
 
-		movl %r12d, %esi /*move width counter to esi */
-		imull %ecx, %esi /* multiply height with width counter */
-		addl %r11d, %esi /* add height counter to the above to get j * height + i */
+		movl %r12d, %r13d /*move width counter to r13 */
+		imull %ecx, %r13d /* multiply height with width counter */
+		addl %r11d, %r13d /* add height counter to the above to get j * height + i */
 
 		movl (%r9, %rdx, 4), %ebx /* set temp variable to input->data[index] */ 
 		/* we use rdx to account for the 64bit index register */
-		movl %ebx, (%r10, %rsi, 4) /* set output->data[index] to the temp variable above */
+		movl %ebx, (%r10, %r13, 4) /* set output->data[index] to the temp variable above */
 		/* we use ebx to account for the 64bit index register */ 
 
 		incl %r12d /* increment the width counter */
@@ -231,10 +233,11 @@ imgproc_transpose:
 
 	.height_not_equal_width: /* terminate program if height and width are not equal */
 		movl $0, %eax /* the image is not a square, return 0 */
-		movq  %rbp, %rsp     # restore stack pointer to frame base
-    	popq  %r12
-    	popq  %rbx
-    	popq  %rbp
+		popq %r13
+		popq %r12
+		popq %rbx
+		movq %rbp, %rsp
+		popq %rbp
 		ret
 
 	.go_to_next_row:
@@ -243,10 +246,11 @@ imgproc_transpose:
 	
 	.exit_loop:
 		movl $1, %eax /* loop successful, return 1 */
-		movq  %rbp, %rsp
-		popq  %r12
-		popq  %rbx
-		popq  %rbp
+		popq %r13
+		popq %r12
+		popq %rbx
+		movq %rbp, %rsp
+		popq %rbp
 		ret
 
 

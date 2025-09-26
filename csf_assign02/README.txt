@@ -5,6 +5,6 @@ Gavin Simurdiak
 -gsimurd1@jh.edu
 
 TODO: contributions of each team member
-Isaac: Completed complement, transpose, and ellipse functions as well as doing a lot of testing and improvement when tests failed
+Isaac: Completed complement function (and the helper functions).
 
-Gavin: Completed emboss function, all get helper functions (r,g,b,a), as well as the emboss_gray helper function, and wrote unit tests for the helper functions
+Gavin: Completed the transpose function and also debugged all of the written code to check for memory errors or logical faults. 

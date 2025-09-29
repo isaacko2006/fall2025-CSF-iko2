@@ -197,11 +197,9 @@ imgproc_transpose:
 	pushq %rbx
 	pushq %r12
 	pushq %r13
-
 	
 	movl (%rdi), %eax /* get width */
 	movl 4(%rdi), %ecx /* offset for four to get the height */
-
 
 	cmpl %ecx, %eax /* check if height != width */
 	jne .height_not_equal_width
@@ -286,7 +284,111 @@ imgproc_transpose:
  */
 	.globl imgproc_ellipse
 imgproc_ellipse:
-	/* TODO: implement */
+	/* Registers used:
+	 * %eax - width of input image
+	 * %ecx - height of input image
+	 * %r8 - variable a = width / 2
+	 * %r9 - variable b = height / 2
+	 * %r10 - height iteration counter (i equivalent)
+	 * %r11 - row iteration counter (j equivalent)
+	 * %r12 - x = j - a;
+	 * %r13 - y = i - b;
+	 * %r14 - ellipse calculation variable
+	 * %r15 - ellipse calculation variable
+	 * %r16 - holds term 1 calculation
+	 * %r17 - holds term 2 calculation
+	 * %edx - denominator used for division
+	 * %esi - nominator used for division
+	 */
+	 
+	pushq %rbp
+	movq %rsp, %rbp
+	pushq %r12
+	pushq %r13
+	pushq %r14
+	pushq %r15
+	pushq %r16
+	pushq %r17
+
+	movl (%rdi), %eax /* get width */
+	movl 4(%rdi), %ecx /* offset for four to get the height */
+
+	movl %eax, %r8d /* move width into %r8d */
+	shrl $1, %r8d /* perform bitwise shift right by 1 bit, dividing width by 2 */
+
+	movl %eax, %r9d /*move height into %r9d */
+	shrl $1, %r9d /* perform bitwise shift right by 1 bit, dividing height by 2 */
+
+	xorl %r10d, %r10d /* create a counter to track height iteration */
+	.row_iterate:
+		cmpl %ecx, %r10d /* compare height to height counter */
+		jge .exit_loop
+	
+		xorl %r11d, %r11d /*set a counter to zero to track width */
+	.col_iterate:
+		cmpl %eax, %r11d
+		jge. go_to_next_row
+
+		movl %r11d, %r12d /* move j into r12 */
+		subl %r8d, %r12d /* subtract j from a */
+
+		movl %r10d, %r13d /* move i into r13 */
+		subl %r9d, %r13d /* subtract i from b */
+
+		/* begin calcuation here */
+
+		/* first term */
+		movl %r12d, %r14d /* move x into r14d */
+		imull %r14d, %r14d /* r14 = x * x */
+		imull $10000, %r14d /* r14 = 10,000 * x */
+		movl %r8d, %r15d /* r15d = a */
+		imull %r15d, %r15d /* r15 = a * a */
+		movl %r14d, %esi /* move r14d into the numerator */
+		movl %r15d, %edx /* move r15d into the denominator */
+		movl %edx, %eax /* move edx into eax to prep for division */
+		cdq
+		idivl %esi /* complete division */
+		movl %eax, %r16d /*save term 1 into r16d */
+
+		/* second term */
+		movl %r13d, %14d /* move y into r14d */
+		imull %r14d, %14d /* r14 = y * y */
+		imull $10000, %14d /* r14 = 10,000 * y */
+		movl %r9d, %r15d /* r15d = b */
+		imull %r15d, %r15d /* r15 = b * b */
+		movl %r14d, %esi /* move r14d into the numerator */
+		movl %r15d, %edx /* move r15d into the denominator */
+		movl %edx, %eax /* move edx into eax to prep for division */
+		cdq
+		idivl %esi /* complete division */
+		movl %eax, %17d /*save term 1 into r16d */
+
+		addl %r16d, %r17d /* add term 1 and term 2 */
+		cmpl $10,000, %r17d /*check if term1+term2 <= 10,000 */
+		jg .make_pixel_black
+
+		/* copy pixel data */
+
+		incl %r11d /*increment col iterator (j++) */
+		jmp .col_iterate
+
+	.make_pixel_black:
+		/* To do */
+
+	.next_row:
+		incl %r10d /* increment height counter (i++) */
+		jmp .row_iterate
+
+	.exit_loop:
+		popq %r17
+		popq %r16
+		popq %r15
+		popq %r14
+		popq %r13
+		popq %r12
+		popq %rbp
+		ret
+
 	ret
 
 /*
@@ -324,7 +426,8 @@ imgproc_ellipse:
  */
 	.globl imgproc_emboss
 imgproc_emboss:
-	/* TODO: implement */
+
+
 	ret
 
 /*

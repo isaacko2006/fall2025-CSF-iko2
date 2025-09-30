@@ -320,14 +320,14 @@ imgproc_ellipse:
 	shrl $1, %r9d /* perform bitwise shift right by 1 bit, dividing height by 2 */
 
 	xorl %r10d, %r10d /* create a counter to track height iteration */
-	.row_iterate:
+	.row_it:
 		cmpl %ecx, %r10d /* compare height to height counter */
-		jge .exit_loop
+		jge .done
 	
 		xorl %r11d, %r11d /*set a counter to zero to track width */
-	.col_iterate:
+	.col_it:
 		cmpl %eax, %r11d
-		jge. go_to_next_row
+		jge .next_r
 
 		movl %r11d, %r12d /* move j into r12 */
 		subl %r8d, %r12d /* subtract j from a */
@@ -351,9 +351,9 @@ imgproc_ellipse:
 		movl %eax, %r16d /*save term 1 into r16d */
 
 		/* second term */
-		movl %r13d, %14d /* move y into r14d */
-		imull %r14d, %14d /* r14 = y * y */
-		imull $10000, %14d /* r14 = 10,000 * y */
+		movl %r13d, %r14d /* move y into r14d */
+		imull %r14d, %r14d /* r14 = y * y */
+		imull $10000, %r14d /* r14 = 10,000 * y */
 		movl %r9d, %r15d /* r15d = b */
 		imull %r15d, %r15d /* r15 = b * b */
 		movl %r14d, %esi /* move r14d into the numerator */
@@ -361,25 +361,36 @@ imgproc_ellipse:
 		movl %edx, %eax /* move edx into eax to prep for division */
 		cdq
 		idivl %esi /* complete division */
-		movl %eax, %17d /*save term 1 into r16d */
+		movl %eax, %r17d /*save term 1 into r16d */
 
 		addl %r16d, %r17d /* add term 1 and term 2 */
-		cmpl $10,000, %r17d /*check if term1+term2 <= 10,000 */
+		cmpl $10000, %r17d /*check if term1+term2 <= 10,000 */
 		jg .make_pixel_black
 
-		/* copy pixel data */
+		/* copy pixel data from input to output */
+		movl (%rdi), %edx /* width */
+		imull %r10d, %edx /* i * width */
+		addl %r11d, %edx /* add j to the above */
+		movq 8(%rdi), %rsi /* put input_img->data to rsi */
+    	movq 8(%rsi), %rdi /* put output_img->data to rdi */
+		movl (%rsi, %rdx, 4), %r12d
+    	movl %r12d, (%rdi, %rdx, 4)
 
 		incl %r11d /*increment col iterator (j++) */
-		jmp .col_iterate
+		jmp .col_it
 
 	.make_pixel_black:
-		/* To do */
+		movl (%rdi), %edx
+		imull %r10d, %edx
+		addl %r11d, %edx
+		movq 8(%rsi), %rdi
+		movl $0x000000FF, (%rdi,%rdx,4)
 
-	.next_row:
+	.next_r:
 		incl %r10d /* increment height counter (i++) */
-		jmp .row_iterate
+		jmp .row_it
 
-	.exit_loop:
+	.done:
 		popq %r17
 		popq %r16
 		popq %r15

@@ -1,3 +1,2 @@
-Error: compare exited with a non-zero exit code (1)
+Error: ./asm_imgproc did not exit normally
 Error output was:
-16477.4 (0.25143)

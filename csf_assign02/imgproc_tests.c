@@ -327,7 +327,7 @@ void test_transpose_basic(TestObjs *objs)
 
   destroy_img(sq_test_transpose_expected);
 }
-/*
+
 void test_ellipse_basic(TestObjs *objs)
 {
   struct Picture smiley_ellipse_expected_pic = {
@@ -362,7 +362,7 @@ void test_ellipse_basic(TestObjs *objs)
 
   destroy_img(smiley_ellipse_expected);
 }
-
+/*
 void test_emboss_basic(TestObjs *objs)
 {
   struct Picture smiley_emboss_expected_pic = {

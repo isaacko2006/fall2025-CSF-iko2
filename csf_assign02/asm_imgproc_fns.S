@@ -285,7 +285,7 @@ imgproc_transpose:
 	.globl imgproc_ellipse
 imgproc_ellipse:
 	/* Registers used:
-	 * %eax - width of input image
+	 * %eax - width of input image, then division numerator
 	 * %ecx - height of input image
 	 * %r8 - variable a = width / 2
 	 * %r9 - variable b = height / 2
@@ -293,11 +293,13 @@ imgproc_ellipse:
 	 * %r11 - row iteration counter (j equivalent)
 	 * %r12 - x = j - a;
 	 * %r13 - y = i - b;
-	 * %r14 - ellipse calculation variable and holds term 2
+	 * %r14 - ellipse calculation variable 
 	 * %r15 - ellipse calculation variable
 	 * %rbx - holds term 1 calculation
 	 * %edx - denominator used for division
-	 * %esi - nominator used for division
+	 * %ebx - holds term 1 after division
+	 * %rax - input data pointer
+	 * %rcx - output data pointer
 	 */
 	 
 	pushq %rbp
@@ -346,7 +348,7 @@ imgproc_ellipse:
 		movl %r14d, %eax /* move r14d into the numerator */
 		cdq
 		idivl %r15d /* complete division */
-		movl %eax, %ebx /*save term 1 into r16d */
+		movl %eax, %ebx /*save term 1 into ebx */
 
 		/* second term */
 		movl %r13d, %r14d /* move y into r14d */
@@ -357,7 +359,7 @@ imgproc_ellipse:
 		movl %r14d, %eax /* move r14d into the numerator */
 		cdq
 		idivl %r15d /* complete division */
-		movl %eax, %r14d /*save term 1 into r16d */
+		movl %eax, %r14d /*save term 1 into r14 */
 
 		addl %ebx, %r14d /* add term 1 and term 2 */
 		cmpl $10000, %r14d /*check if term1+term2 <= 10,000 */
@@ -367,21 +369,21 @@ imgproc_ellipse:
 		movl (%rdi), %edx /* width */
 		imull %r10d, %edx /* i * width */
 		addl %r11d, %edx /* add j to the above */
-		movq 8(%rdi), %rax /* put input_img->data to rsi */
-    	movq 8(%rsi), %rcx /* put output_img->data to rdi */
-		movl (%rax,%rdx,4), %r12d
-		movl %r12d, (%rcx,%rdx,4)
+		movq 8(%rdi), %rax /* put input_img->data to rax */
+    	movq 8(%rsi), %rcx /* put output_img->data to rcx */
+		movl (%rax,%rdx,4), %r12d /* load pixel */
+		movl %r12d, (%rcx,%rdx,4) /* store pixel */
 
 		incl %r11d /*increment col iterator (j++) */
 		jmp .col_it
 
 	.make_pixel_black:
-		movl (%rdi), %edx
-		imull %r10d, %edx
-		addl %r11d, %edx
-		movq 8(%rsi), %rcx
+		movl (%rdi), %edx /* put width into edx */
+		imull %r10d, %edx /* i * width */
+		addl %r11d, %edx /* add j to the above */
+		movq 8(%rsi), %rcx /* put output_img to rcx */
 		movl $0x000000FF, (%rcx,%rdx,4)
-		incl %r11d
+		incl %r11d /* increment j */
 		jmp .col_it 
 
 	.next_r:

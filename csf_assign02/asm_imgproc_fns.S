@@ -316,7 +316,7 @@ imgproc_ellipse:
 	movl %eax, %r8d /* move width into %r8d */
 	shrl $1, %r8d /* perform bitwise shift right by 1 bit, dividing width by 2 */
 
-	movl %eax, %r9d /*move height into %r9d */
+	movl %ecx, %r9d /*move height into %r9d */
 	shrl $1, %r9d /* perform bitwise shift right by 1 bit, dividing height by 2 */
 
 	xorl %r10d, %r10d /* create a counter to track height iteration */
@@ -372,7 +372,7 @@ imgproc_ellipse:
 		imull %r10d, %edx /* i * width */
 		addl %r11d, %edx /* add j to the above */
 		movq 8(%rdi), %rsi /* put input_img->data to rsi */
-    	movq 8(%rsi), %rdi /* put output_img->data to rdi */
+    	movq 8(%rsi), %rdx /* put output_img->data to rdi */
 		movl (%rsi, %rdx, 4), %r12d
     	movl %r12d, (%rdi, %rdx, 4)
 

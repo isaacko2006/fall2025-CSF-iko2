@@ -293,10 +293,9 @@ imgproc_ellipse:
 	 * %r11 - row iteration counter (j equivalent)
 	 * %r12 - x = j - a;
 	 * %r13 - y = i - b;
-	 * %r14 - ellipse calculation variable
+	 * %r14 - ellipse calculation variable and holds term 2
 	 * %r15 - ellipse calculation variable
-	 * %r16 - holds term 1 calculation
-	 * %r17 - holds term 2 calculation
+	 * %rbx - holds term 1 calculation
 	 * %edx - denominator used for division
 	 * %esi - nominator used for division
 	 */
@@ -307,8 +306,7 @@ imgproc_ellipse:
 	pushq %r13
 	pushq %r14
 	pushq %r15
-	pushq %r16
-	pushq %r17
+	pushq %rbx
 
 	movl (%rdi), %eax /* get width */
 	movl 4(%rdi), %ecx /* offset for four to get the height */
@@ -321,11 +319,13 @@ imgproc_ellipse:
 
 	xorl %r10d, %r10d /* create a counter to track height iteration */
 	.row_it:
+		movl 4(%rdi), %ecx
 		cmpl %ecx, %r10d /* compare height to height counter */
 		jge .done
 	
 		xorl %r11d, %r11d /*set a counter to zero to track width */
 	.col_it:
+		movl (%rdi), %eax
 		cmpl %eax, %r11d
 		jge .next_r
 
@@ -343,12 +343,10 @@ imgproc_ellipse:
 		imull $10000, %r14d /* r14 = 10,000 * x */
 		movl %r8d, %r15d /* r15d = a */
 		imull %r15d, %r15d /* r15 = a * a */
-		movl %r14d, %esi /* move r14d into the numerator */
-		movl %r15d, %edx /* move r15d into the denominator */
-		movl %edx, %eax /* move edx into eax to prep for division */
+		movl %r14d, %eax /* move r14d into the numerator */
 		cdq
-		idivl %esi /* complete division */
-		movl %eax, %r16d /*save term 1 into r16d */
+		idivl %r15d /* complete division */
+		movl %eax, %ebx /*save term 1 into r16d */
 
 		/* second term */
 		movl %r13d, %r14d /* move y into r14d */
@@ -356,25 +354,23 @@ imgproc_ellipse:
 		imull $10000, %r14d /* r14 = 10,000 * y */
 		movl %r9d, %r15d /* r15d = b */
 		imull %r15d, %r15d /* r15 = b * b */
-		movl %r14d, %esi /* move r14d into the numerator */
-		movl %r15d, %edx /* move r15d into the denominator */
-		movl %edx, %eax /* move edx into eax to prep for division */
+		movl %r14d, %eax /* move r14d into the numerator */
 		cdq
-		idivl %esi /* complete division */
-		movl %eax, %r17d /*save term 1 into r16d */
+		idivl %r15d /* complete division */
+		movl %eax, %r14d /*save term 1 into r16d */
 
-		addl %r16d, %r17d /* add term 1 and term 2 */
-		cmpl $10000, %r17d /*check if term1+term2 <= 10,000 */
+		addl %ebx, %r14d /* add term 1 and term 2 */
+		cmpl $10000, %r14d /*check if term1+term2 <= 10,000 */
 		jg .make_pixel_black
 
 		/* copy pixel data from input to output */
 		movl (%rdi), %edx /* width */
 		imull %r10d, %edx /* i * width */
 		addl %r11d, %edx /* add j to the above */
-		movq 8(%rdi), %rsi /* put input_img->data to rsi */
-    	movq 8(%rsi), %rdx /* put output_img->data to rdi */
-		movl (%rsi, %rdx, 4), %r12d
-    	movl %r12d, (%rdi, %rdx, 4)
+		movq 8(%rdi), %rax /* put input_img->data to rsi */
+    	movq 8(%rsi), %rcx /* put output_img->data to rdi */
+		movl (%rax,%rdx,4), %r12d
+		movl %r12d, (%rcx,%rdx,4)
 
 		incl %r11d /*increment col iterator (j++) */
 		jmp .col_it
@@ -383,16 +379,17 @@ imgproc_ellipse:
 		movl (%rdi), %edx
 		imull %r10d, %edx
 		addl %r11d, %edx
-		movq 8(%rsi), %rdi
-		movl $0x000000FF, (%rdi,%rdx,4)
+		movq 8(%rsi), %rcx
+		movl $0x000000FF, (%rcx,%rdx,4)
+		incl %r11d
+		jmp .col_it 
 
 	.next_r:
 		incl %r10d /* increment height counter (i++) */
 		jmp .row_it
 
 	.done:
-		popq %r17
-		popq %r16
+		popq %rbx
 		popq %r15
 		popq %r14
 		popq %r13

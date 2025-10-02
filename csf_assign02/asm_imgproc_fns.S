@@ -60,10 +60,103 @@ get_a:
 	andl $0xFF, %eax
 	ret
 
+/*
+ * Helper function to do math behind emboss function to return correct, clamped gray value
+ * 
+ * Parameters:
+ *   %edi - current pixel
+ *   %esi - upper-left neighbor pixel
+ *
+ * Returns:
+ *   %eax - gray value (0..255)
+ */
 	.globl emboss_gray
 emboss_gray:
-	/*TODO*/
+	/* Registers used:
+	 * %r8d  - copy of current pixel
+	 * %r9d  - copy of neighbor pixel
+	 * %r10d - red difference
+	 * %r11d - green difference
+	 * %r12d - blue difference
+	 * %r14d - temporary for blue absolute
+	 * %r15d - candidate / final gray value
+	 * %eax  - return value
+	 */
+	pushq %rbp
+	movq %rsp, %rbp
+
+	movl %edi, %r8d     /* pixel -> r8d */
+	movl %esi, %r9d     /* neighbor -> r9d */
+
+	/* compute red diff */
+	movl %r9d, %edi
+	call get_r
+	movl %eax, %r10d        /* nr */
+	movl %r8d, %edi
+	call get_r
+	subl %eax, %r10d        /* diff_r = nr - r */
+
+	/* compute green diff */
+	movl %r9d, %edi
+	call get_g
+	movl %eax, %r11d        /* ng */
+	movl %r8d, %edi
+	call get_g
+	subl %eax, %r11d        /* diff_g = ng - g */
+
+	/* compute blue diff */
+	movl %r9d, %edi
+	call get_b
+	movl %eax, %r12d        /* nb */
+	movl %r8d, %edi
+	call get_b
+	subl %eax, %r12d        /* diff_b = nb - b */
+
+	/* absolute values */
+	movl %r10d, %eax
+	testl %eax, %eax
+	jge .abs_r_done
+	negl %eax
+.abs_r_done:
+
+	movl %r11d, %edx
+	testl %edx, %edx
+	jge .abs_g_done
+	negl %edx
+.abs_g_done:
+
+	movl %r12d, %r14d
+	testl %r14d, %r14d
+	jge .abs_b_done
+	negl %r14d
+.abs_b_done:
+
+	/* priority R > G > B */
+	movl %eax, %r15d
+	cmpl %edx, %r15d
+	jge .check_b
+	movl %edx, %r15d
+.check_b:
+	cmpl %r14d, %r15d
+	jge .final_gray
+	movl %r14d, %r15d
+.final_gray:
+
+	/* compute gray = 128 + diff and clamp */
+	addl $128, %r15d
+	cmpl $0, %r15d
+	jge .clamp_high
+	xorl %r15d, %r15d
+	jmp .completed
+.clamp_high:
+	cmpl $255, %r15d
+	jle .completed
+	movl $255, %r15d
+.completed:
+	movl %r15d, %eax
+	popq %rbp
 	ret
+
 
 
 /*
@@ -436,8 +529,124 @@ imgproc_ellipse:
  */
 	.globl imgproc_emboss
 imgproc_emboss:
+	/* Registers used:
+	 * %r8   - input->data pointer
+	 * %r9   - output->data pointer
+	 * %r10  - row index i
+	 * %r11  - column index j
+	 * %r12d - width
+	 * %r13d - height
+	 * %r14  - current pixel index
+	 * %r15d - alpha value / temporary
+	 * %eax, %ebx, %ecx, %edx - temporary for pixel assembly
+	 */
+	pushq %rbp
+	movq %rsp, %rbp
+	pushq %rbx
+	pushq %r12
+	pushq %r13
+	pushq %r14
+	pushq %r15
 
+	movl (%rdi), %r12d       /* width */
+	movl 4(%rdi), %r13d      /* height */
+	movq 8(%rdi), %r8        /* input->data */
+	movq 8(%rsi), %r9        /* output->data */
 
+	xorq %r10, %r10          /* row index i = 0 */
+
+.row_loop:
+	cmp %r10d, %r13d
+	jge .finished
+
+	xorq %r11, %r11          /* column index j = 0 */
+
+.col_loop:
+	cmp %r11d, %r12d
+	jge .next_row
+
+	/* current pixel index = i*width + j */
+	movq %r10, %rax
+	imulq %r12, %rax
+	addq %r11, %rax
+	movq %rax, %r14          /* r14 = index */
+
+	movl (%r8,%r14,4), %ebx  /* load current pixel */
+
+	/* edge pixels: top row or left column */
+	test %r10d, %r10d
+	jz .edge
+	test %r11d, %r11d
+	jz .edge
+
+	/* non-edge pixel emboss */
+	/* compute neighbor index = (i-1)*width + (j-1) */
+	movq %r10, %rax
+	dec %rax
+	imulq %r12, %rax
+	movq %r11, %rcx
+	dec %rcx
+	addq %rax, %rcx
+	movl (%r8,%rcx,4), %esi  /* neighbor pixel */
+
+	movl %ebx, %edi          /* current pixel */
+	movl %esi, %esi          /* neighbor pixel */
+	call emboss_gray         /* returns gray in %eax */
+
+	/* preserve alpha of current pixel */
+	movl %ebx, %edi
+	call get_a               
+	movl %eax, %r15d         /* save alpha */
+
+	/* assemble gray into RGB */
+	movl %eax, %ebx          /* gray for B */
+	movl %eax, %ecx          /* gray for G */
+	movl %eax, %edx          /* gray for R */
+	shll $16, %edx           /* R = gray << 16 */
+	shll $8, %ecx            /* G = gray << 8 */
+	orl %ecx, %edx
+	orl %ebx, %edx
+	movl %r15d, %ebx
+	shll $24, %ebx           /* alpha << 24 */
+	orl %ebx, %edx           /* add alpha */
+	movl %edx, (%r9,%r14,4)  /* store pixel */
+
+	jmp .inc
+
+.edge:
+	/* edge pixel: set RGB = 128, preserve alpha */
+	movl %ebx, %edi
+	call get_a               /* alpha -> %eax */
+	movl %eax, %r15d
+
+	movl $128, %edx
+	shll $16, %edx           /* R = 128 << 16 */
+	movl $128, %ecx
+	shll $8, %ecx            /* G = 128 << 8 */
+	orl %ecx, %edx
+	movl $128, %ebx           /* B = 128 */
+	orl %ebx, %edx
+	movl %r15d, %ebx
+	shll $24, %ebx           /* alpha << 24 */
+	orl %ebx, %edx
+	movl %edx, (%r9,%r14,4)  /* store pixel */
+
+.inc:
+	inc %r11d
+	jmp .col_loop
+
+.next_row:
+	inc %r10d
+	jmp .row_loop
+
+.finished:
+	popq %r15
+	popq %r14
+	popq %r13
+	popq %r12
+	popq %rbx
+	movq %rbp, %rsp
+	popq %rbp
 	ret
 
 /*

@@ -74,98 +74,95 @@ get_a:
 emboss_gray:
         .globl emboss_gray
 emboss_gray:
-    /* uint8_t emboss_gray(uint32_t pixel, uint32_t pixel_upperleft)
-       %edi = pixel, %esi = neighbor, returns gray (0..255) in %eax
-    */
+	/* Registers used:
+		* %r12d = diffr = (nr - r)
+		* %r13d = diffg = (ng - g)
+		* %r14d = diffb = (nb - b)
+		* %r15d = candidate signed difference
+		* %r8d  = temporary variable for absolute diff of candidate
+		* %edx  = temp var for |diffg|
+		* %ecx  = temp var for |diffb|
+		* %eax  = return value (gray), also used by get_* helpers
+		*/
+	
     pushq %rbp
-    movq  %rsp, %rbp
+    movq %rsp, %rbp
     pushq %r12
     pushq %r13
     pushq %r14
     pushq %r15
 
-    /* copies of inputs */
-    movl %edi, %r8d          /* pixel */
-    movl %esi, %r9d          /* neighbor */
+    movl %edi, %r8d		/* move current pixel into r8 */
+    movl %esi, %r9d 	/* move upper left neighbor into r9 */
 
-    /* diffr = nr - r -> r12d */
-    movl %r9d, %edi
-    call get_r
-    movl %eax, %r12d
-    movl %r8d, %edi
-    call get_r
-    subl %eax, %r12d
+	/* calculate diffr */
+    movl %r9d, %edi	/*move neighbor into edi */
+    call get_r 	/* get r of neighbor */
+    movl %eax, %r12d 	/*r12d = nr */
+    movl %r8d, %edi 	/* move pixel into edi */
+    call get_r 		/* eax = R(pixel) */
+    subl %eax, %r12d 	/*r12d = nr - r */
 
-    /* diffg = ng - g -> r13d */
-    movl %r9d, %edi
-    call get_g
-    movl %eax, %r13d
-    movl %r8d, %edi
-    call get_g
-    subl %eax, %r13d
+	/* calculate diffb */
+    movl %r9d, %edi 	/* move neighbor into edi */
+    call get_g		/*eax = G(neighbor) */
+    movl %eax, %r13d 	/* r13d = ng */
+    movl %r8d, %edi		/*move pixel into edi */
+    call get_g	/*eax = G(pixel) */
+    subl %eax, %r13d	/*r13d = ng - g*/
 
-    /* diffb = nb - b -> r14d */
-    movl %r9d, %edi
-    call get_b
-    movl %eax, %r14d
-    movl %r8d, %edi
-    call get_b
-    subl %eax, %r14d
-
-    /* candidate = diffr (keep SIGNED in r15d); cand_abs in r8d */
-    movl %r12d, %r15d        /* candidate (signed) */
-    movl %r12d, %r8d         /* abs(candidate) */
-    testl %r8d, %r8d
-    jge   1f
-    negl  %r8d
+    movl %r9d, %edi		/* move neighbor into edi */
+    call get_b		/* eax = B(neighbor) */
+    movl %eax, %r14d	/* r14d = nb */
+    movl %r8d, %edi 	/* move pixel into edi */
+    call get_b	/*eax = B(pixel) */
+    subl %eax, %r14d 	/*r14d = nb - b */
+	
+	/* select the difference with the greatest absolute value */
+    movl %r12d, %r15d	/* r15 becomes the candidate */
+    movl %r12d, %r8d	/* r8d = |candidate */
+    testl %r8d, %r8d	/* check the sign of candidate */
+    jge 1f	/* if it its greater than zero, skip the negation, otherwise negate */
+    negl %r8d
 1:
-
-    /* consider diffg */
-    movl %r13d, %edx         /* abs(diffg) -> edx */
+    movl %r13d, %edx	/* move diffg into edx */
     testl %edx, %edx
-    jge   2f
-    negl  %edx
+    jge 2f
+    negl %edx /* edx holds |diffg| */
 2:
-    cmpl %r8d, %edx          /* if |g| > cand_abs, take g */
-    jle  3f
-    movl %r13d, %r15d        /* candidate = diffg (SIGNED) */
-    movl %edx,  %r8d         /* cand_abs = |g| */
+    cmpl %r8d, %edx      /* compare |diffg| to the candidate */
+    jle 3f	/* if |diffg| <= candidate, keep the current candidate */
+	movl  %r13d, %r15d /* otherwise, set candidate = diffg */
+    movl %edx,  %r8d   /* set the new candidate's absolute value equal to diff g*/
 3:
-
-    /* consider diffb */
-    movl %r14d, %ecx         /* abs(diffb) -> ecx */
+    movl %r14d, %ecx   /* move diffb into ecx */
     testl %ecx, %ecx
-    jge   4f
-    negl  %ecx
+    jge 4f
+    negl %ecx	/* ecx = |diffb| */
 4:
-    cmpl %r8d, %ecx          /* if |b| > cand_abs, take b */
-    jle  5f
-    movl %r14d, %r15d        /* candidate = diffb (SIGNED) */
-    movl %ecx,  %r8d         /* cand_abs = |b| */
+    cmpl %r8d, %ecx		/* compare |diffb| to candidate */
+    jle 5f	/* if |diffb| <= candidate, keep the current candidate */
+    movl %r14d, %r15d   /* otherwise, set candidate = diffb */
+    movl %ecx, %r8d 	/* set the new candidate's absolute value equal to diff b*/
 5:
-
-    /* gray = clamp(128 + candidate, 0..255) */
-    addl $128, %r15d
-    cmpl $0, %r15d
-    jge  6f
-    xorl %r15d, %r15d
-    jmp  7f
+	/* begin clamping */
+    addl $128, %r15d	/* gray = 128 + diff */
+    cmpl $0, %r15d	/* if gray < 0 */
+    jge 6f
+    xorl %r15d, %r15d /* gray = 0 */
+    jmp 7f
 6:
-    cmpl $255, %r15d
-    jle  7f
-    movl $255, %r15d
+    cmpl $255, %r15d /*else if gray > 225 */
+    jle 7f
+    movl $255, %r15d /* gray = 225 */
 7:
-    movl %r15d, %eax
-
+    movl %r15d, %eax /* move gray into eax */
     popq %r15
     popq %r14
     popq %r13
     popq %r12
     popq %rbp
     ret
-
-    
-
 
 
 /*
@@ -201,7 +198,7 @@ imgproc_complement:
 	pushq %rbp
 	movq %rsp, %rbp
 	
-	movl (%rdi), %eax 	/* get width and height */
+	movl (%rdi), %eax	/* get width and height */
 	movl 4(%rdi), %ecx  	/* offset for four to get the height */
 	imull %ecx, %eax  	/* multiply height and width to find total pixel count */
 	movl %eax, %r8d /* r8d now holds the total number of pixels */

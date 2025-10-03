@@ -83,6 +83,9 @@ emboss_gray:
 	 * %eax  - return value
 	 */
 	pushq %rbp
+	pushq %r12
+    pushq %r14
+    pushq %r15
 	movq %rsp, %rbp
 
 	movl %edi, %r8d     /* pixel -> r8d */
@@ -154,8 +157,12 @@ emboss_gray:
 	movl $255, %r15d
 .completed:
 	movl %r15d, %eax
-	popq %rbp
-	ret
+    popq %r15
+    popq %r14
+    popq %r12
+    movq %rbp, %rsp
+    popq %rbp
+    ret
 
 
 
@@ -593,7 +600,7 @@ imgproc_emboss:
 	movl %esi, %esi          /* neighbor pixel */
 	pushq %r8
 	pushq %r9
-	call emboss_gray         /* returns gray in %eax */
+	call emboss_gray
 	popq  %r9
     popq  %r8
 

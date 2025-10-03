@@ -69,7 +69,7 @@ get_a:
  *
  * Returns:
  *   %eax - gray value (0..255)
- */
+ * /
 	.globl emboss_gray
 emboss_gray:
 	/* Registers used:
@@ -556,13 +556,13 @@ imgproc_emboss:
 	xorq %r10, %r10          /* row index i = 0 */
 
 .row_loop:
-	cmp %r10d, %r13d
+	cmpl %r13d, %r10d
 	jge .finished
 
 	xorq %r11, %r11          /* column index j = 0 */
 
 .col_loop:
-	cmp %r11d, %r12d
+	cmpl %r12d, %r11d
 	jge .next_row
 
 	/* current pixel index = i*width + j */
@@ -591,12 +591,20 @@ imgproc_emboss:
 
 	movl %ebx, %edi          /* current pixel */
 	movl %esi, %esi          /* neighbor pixel */
+	pushq %r8
+	pushq %r9
 	call emboss_gray         /* returns gray in %eax */
+	popq  %r9
+    popq  %r8
 
 	/* preserve alpha of current pixel */
 	movl %ebx, %edi
+	pushq %r8
+	pushq %r9
 	call get_a               
 	movl %eax, %r15d         /* save alpha */
+	popq  %r9
+    popq  %r8
 
 	/* assemble gray into RGB */
 	movl %eax, %ebx          /* gray for B */
@@ -616,7 +624,11 @@ imgproc_emboss:
 .edge:
 	/* edge pixel: set RGB = 128, preserve alpha */
 	movl %ebx, %edi
-	call get_a               /* alpha -> %eax */
+	pushq %r8
+    pushq %r9
+    call get_a                  /* A -> %eax */
+    popq  %r9
+    popq  %r8
 	movl %eax, %r15d
 
 	movl $128, %edx

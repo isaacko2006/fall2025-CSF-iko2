@@ -553,6 +553,7 @@ imgproc_emboss:
 	pushq %r13
 	pushq %r14
 	pushq %r15
+	subq $8, %rsp
 
 	movl (%rdi), %r12d       /* width */
 	movl 4(%rdi), %r13d      /* height */
@@ -596,7 +597,6 @@ imgproc_emboss:
 	movl (%r8,%rcx,4), %esi  /* neighbor pixel */
 
 	movl %ebx, %edi          /* current pixel */
-	movl %esi, %esi          /* neighbor pixel */
 	pushq %r8
 	pushq %r9
 	call emboss_gray

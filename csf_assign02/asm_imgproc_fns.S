@@ -72,8 +72,6 @@ get_a:
  */
 	.globl emboss_gray
 emboss_gray:
-        .globl emboss_gray
-emboss_gray:
 	/* Registers used:
 		* %r12d = diffr = (nr - r)
 		* %r13d = diffg = (ng - g)

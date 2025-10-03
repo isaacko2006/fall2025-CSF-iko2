@@ -115,11 +115,11 @@ int main(int argc, char **argv)
   TEST(test_complement_basic);
   TEST(test_transpose_basic);
   TEST(test_ellipse_basic);
-  //TEST(test_emboss_basic);
+  TEST(test_emboss_basic);
 
   // helper function tests
   TEST(test_get_attributes);
-  //TEST(test_emboss_gray);
+  TEST(test_emboss_gray);
 
   TEST_FINI();
 }
@@ -362,7 +362,7 @@ void test_ellipse_basic(TestObjs *objs)
 
   destroy_img(smiley_ellipse_expected);
 }
-/*
+
 void test_emboss_basic(TestObjs *objs)
 {
   struct Picture smiley_emboss_expected_pic = {
@@ -393,7 +393,7 @@ void test_emboss_basic(TestObjs *objs)
 
   destroy_img(smiley_emboss_expected);
 }
-*/
+
 void test_get_attributes(TestObjs *objs)
 {
   // silence objs parameter because it had to be passed in for declaration, but isn't needed in helper
@@ -414,7 +414,7 @@ void test_get_attributes(TestObjs *objs)
   ASSERT(get_b(pixel2) == 0xFF);
   ASSERT(get_a(pixel2) == 0x00);
 }
-/*
+
 void test_emboss_gray(TestObjs *objs)
 {
   // silence objs parameter because it had to be passed in for declaration, but isn't needed in helper
@@ -441,4 +441,3 @@ void test_emboss_gray(TestObjs *objs)
   // red wins in case of tie, 128+16
   ASSERT(emboss_gray(curr, neigh) == 144);
 }
-*/

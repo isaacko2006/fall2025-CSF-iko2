@@ -69,100 +69,102 @@ get_a:
  *
  * Returns:
  *   %eax - gray value (0..255)
- * /
+ */
 	.globl emboss_gray
 emboss_gray:
-	/* Registers used:
-	 * %r8d  - copy of current pixel
-	 * %r9d  - copy of neighbor pixel
-	 * %r10d - red difference
-	 * %r11d - green difference
-	 * %r12d - blue difference
-	 * %r14d - temporary for blue absolute
-	 * %r15d - candidate / final gray value
-	 * %eax  - return value
-	 */
-	pushq %rbp
-	pushq %r12
+        .globl emboss_gray
+emboss_gray:
+    /* uint8_t emboss_gray(uint32_t pixel, uint32_t pixel_upperleft)
+       %edi = pixel, %esi = neighbor, returns gray (0..255) in %eax
+    */
+    pushq %rbp
+    movq  %rsp, %rbp
+    pushq %r12
+    pushq %r13
     pushq %r14
     pushq %r15
-	movq %rsp, %rbp
 
-	movl %edi, %r8d     /* pixel -> r8d */
-	movl %esi, %r9d     /* neighbor -> r9d */
+    /* copies of inputs */
+    movl %edi, %r8d          /* pixel */
+    movl %esi, %r9d          /* neighbor */
 
-	/* compute red diff */
-	movl %r9d, %edi
-	call get_r
-	movl %eax, %r10d        /* nr */
-	movl %r8d, %edi
-	call get_r
-	subl %eax, %r10d        /* diff_r = nr - r */
+    /* diffr = nr - r -> r12d */
+    movl %r9d, %edi
+    call get_r
+    movl %eax, %r12d
+    movl %r8d, %edi
+    call get_r
+    subl %eax, %r12d
 
-	/* compute green diff */
-	movl %r9d, %edi
-	call get_g
-	movl %eax, %r11d        /* ng */
-	movl %r8d, %edi
-	call get_g
-	subl %eax, %r11d        /* diff_g = ng - g */
+    /* diffg = ng - g -> r13d */
+    movl %r9d, %edi
+    call get_g
+    movl %eax, %r13d
+    movl %r8d, %edi
+    call get_g
+    subl %eax, %r13d
 
-	/* compute blue diff */
-	movl %r9d, %edi
-	call get_b
-	movl %eax, %r12d        /* nb */
-	movl %r8d, %edi
-	call get_b
-	subl %eax, %r12d        /* diff_b = nb - b */
+    /* diffb = nb - b -> r14d */
+    movl %r9d, %edi
+    call get_b
+    movl %eax, %r14d
+    movl %r8d, %edi
+    call get_b
+    subl %eax, %r14d
 
-	/* absolute values */
-	movl %r10d, %eax
-	testl %eax, %eax
-	jge .abs_r_done
-	negl %eax
-.abs_r_done:
+    /* candidate = diffr (keep SIGNED in r15d); cand_abs in r8d */
+    movl %r12d, %r15d        /* candidate (signed) */
+    movl %r12d, %r8d         /* abs(candidate) */
+    testl %r8d, %r8d
+    jge   1f
+    negl  %r8d
+1:
 
-	movl %r11d, %edx
-	testl %edx, %edx
-	jge .abs_g_done
-	negl %edx
-.abs_g_done:
+    /* consider diffg */
+    movl %r13d, %edx         /* abs(diffg) -> edx */
+    testl %edx, %edx
+    jge   2f
+    negl  %edx
+2:
+    cmpl %r8d, %edx          /* if |g| > cand_abs, take g */
+    jle  3f
+    movl %r13d, %r15d        /* candidate = diffg (SIGNED) */
+    movl %edx,  %r8d         /* cand_abs = |g| */
+3:
 
-	movl %r12d, %r14d
-	testl %r14d, %r14d
-	jge .abs_b_done
-	negl %r14d
-.abs_b_done:
+    /* consider diffb */
+    movl %r14d, %ecx         /* abs(diffb) -> ecx */
+    testl %ecx, %ecx
+    jge   4f
+    negl  %ecx
+4:
+    cmpl %r8d, %ecx          /* if |b| > cand_abs, take b */
+    jle  5f
+    movl %r14d, %r15d        /* candidate = diffb (SIGNED) */
+    movl %ecx,  %r8d         /* cand_abs = |b| */
+5:
 
-	/* priority R > G > B */
-	movl %eax, %r15d
-	cmpl %edx, %r15d
-	jge .check_b
-	movl %edx, %r15d
-.check_b:
-	cmpl %r14d, %r15d
-	jge .final_gray
-	movl %r14d, %r15d
-.final_gray:
+    /* gray = clamp(128 + candidate, 0..255) */
+    addl $128, %r15d
+    cmpl $0, %r15d
+    jge  6f
+    xorl %r15d, %r15d
+    jmp  7f
+6:
+    cmpl $255, %r15d
+    jle  7f
+    movl $255, %r15d
+7:
+    movl %r15d, %eax
 
-	/* compute gray = 128 + diff and clamp */
-	addl $128, %r15d
-	cmpl $0, %r15d
-	jge .clamp_high
-	xorl %r15d, %r15d
-	jmp .completed
-.clamp_high:
-	cmpl $255, %r15d
-	jle .completed
-	movl $255, %r15d
-.completed:
-	movl %r15d, %eax
     popq %r15
     popq %r14
+    popq %r13
     popq %r12
-    movq %rbp, %rsp
     popq %rbp
     ret
+
+    
 
 
 

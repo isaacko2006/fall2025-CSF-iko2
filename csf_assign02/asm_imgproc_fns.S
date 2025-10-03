@@ -117,7 +117,7 @@ emboss_gray:
     movl %r8d, %edi 	/* move pixel into edi */
     call get_b	/*eax = B(pixel) */
     subl %eax, %r14d 	/*r14d = nb - b */
-	
+
 	/* select the difference with the greatest absolute value */
     movl %r12d, %r15d	/* r15 becomes the candidate */
     movl %r12d, %r8d	/* r8d = |candidate */

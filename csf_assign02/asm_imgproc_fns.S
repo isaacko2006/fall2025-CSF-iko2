@@ -76,8 +76,8 @@ emboss_gray:
 		* %r12d = diffr = (nr - r)
 		* %r13d = diffg = (ng - g)
 		* %r14d = diffb = (nb - b)
-		* %r15d = candidate signed difference
-		* %r8d  = temporary variable for absolute diff of candidate
+		* %r15d = signed difference
+		* %r8d  = temporary variable for absolute diff
 		* %edx  = temp var for |diffg|
 		* %ecx  = temp var for |diffb|
 		* %eax  = return value (gray), also used by get_* helpers
@@ -98,29 +98,29 @@ emboss_gray:
     call get_r 	/* get r of neighbor */
     movl %eax, %r12d 	/*r12d = nr */
     movl %r8d, %edi 	/* move pixel into edi */
-    call get_r 		/* eax = R(pixel) */
+    call get_r 		/* eax = get r of pixel */
     subl %eax, %r12d 	/*r12d = nr - r */
 
 	/* calculate diffb */
     movl %r9d, %edi 	/* move neighbor into edi */
-    call get_g		/*eax = G(neighbor) */
+    call get_g		/*eax = get g neighbor */
     movl %eax, %r13d 	/* r13d = ng */
     movl %r8d, %edi		/*move pixel into edi */
-    call get_g	/*eax = G(pixel) */
+    call get_g	/*eax = get g pixel */
     subl %eax, %r13d	/*r13d = ng - g*/
 
     movl %r9d, %edi		/* move neighbor into edi */
-    call get_b		/* eax = B(neighbor) */
+    call get_b		/* eax = get b neighbor */
     movl %eax, %r14d	/* r14d = nb */
     movl %r8d, %edi 	/* move pixel into edi */
-    call get_b	/*eax = B(pixel) */
+    call get_b	/*eax = get b pixel */
     subl %eax, %r14d 	/*r14d = nb - b */
 
-	/* select the difference with the greatest absolute value */
-    movl %r12d, %r15d	/* r15 becomes the candidate */
-    movl %r12d, %r8d	/* r8d = |candidate */
-    testl %r8d, %r8d	/* check the sign of candidate */
-    jge 1f	/* if it its greater than zero, skip the negation, otherwise negate */
+	/* select difference with greatest absolute value */
+    movl %r12d, %r15d	/* r15 becomes the diff */
+    movl %r12d, %r8d	/* r8d = |diff| */
+    testl %r8d, %r8d	/* check the sign of diff */
+    jge 1f	/* if greater than zero, skip negation, otherwise negate */
     negl %r8d
 1:
     movl %r13d, %edx	/* move diffg into edx */
@@ -128,20 +128,20 @@ emboss_gray:
     jge 2f
     negl %edx /* edx holds |diffg| */
 2:
-    cmpl %r8d, %edx      /* compare |diffg| to the candidate */
-    jle 3f	/* if |diffg| <= candidate, keep the current candidate */
-	movl  %r13d, %r15d /* otherwise, set candidate = diffg */
-    movl %edx,  %r8d   /* set the new candidate's absolute value equal to diff g*/
+    cmpl %r8d, %edx      /* compare |diffg| to diff */
+    jle 3f	/* if |diffg| <= diff, keep current diff */
+	movl  %r13d, %r15d /* otherwise, set diff = diffg */
+    movl %edx,  %r8d   /* set new diff absolute value equal to diff g*/
 3:
     movl %r14d, %ecx   /* move diffb into ecx */
     testl %ecx, %ecx
     jge 4f
     negl %ecx	/* ecx = |diffb| */
 4:
-    cmpl %r8d, %ecx		/* compare |diffb| to candidate */
-    jle 5f	/* if |diffb| <= candidate, keep the current candidate */
-    movl %r14d, %r15d   /* otherwise, set candidate = diffb */
-    movl %ecx, %r8d 	/* set the new candidate's absolute value equal to diff b*/
+    cmpl %r8d, %ecx		/* compare |diffb| to diff */
+    jle 5f	/* if |diffb| <= diff, keep current diff */
+    movl %r14d, %r15d   /* otherwise, set diff = diffb */
+    movl %ecx, %r8d 	/* set new diff absolute value equal to diff b*/
 5:
 	/* begin clamping */
     addl $128, %r15d	/* gray = 128 + diff */
@@ -569,7 +569,7 @@ imgproc_emboss:
 	cmpl %r12d, %r11d
 	jge .next_row
 
-	/* current pixel index = i*width + j */
+	/* current pixel index = i * width + j */
 	movq %r10, %rax
 	imulq %r12, %rax
 	addq %r11, %rax
@@ -583,7 +583,7 @@ imgproc_emboss:
 	test %r11d, %r11d
 	jz .edge
 
-	/* non-edge pixel emboss */
+	/* non-edge pixel = emboss */
 	/* compute neighbor index = (i-1)*width + (j-1) */
 	movq %r10, %rax
 	dec %rax
@@ -596,12 +596,12 @@ imgproc_emboss:
 	movl %ebx, %edi          /* current pixel */
 	pushq %r8
 	pushq %r9
-	call emboss_gray
+	call emboss_gray /* call emboss gray helper fucntion to get gray value */
 	popq  %r9
     popq  %r8
 
 	/* preserve alpha of current pixel */
-	movl %eax, %r15d	/* save the gray value */
+	movl %eax, %r15d	/* save gray value */
 
     movl %ebx, %edi
     pushq %r8
@@ -615,8 +615,8 @@ imgproc_emboss:
     movl %r15d, %ecx	/* put gray into G base */
     movl %r15d, %edi	/* put gray into B base */
     shll $24, %edx		/* shift bits for red */
-    shll $16, %ecx		/*shift bits for green */
-    shll $8,  %edi		/* shift bits for blue*/
+    shll $16, %ecx		/* shift bits for green */
+    shll $8,  %edi		/* shift bits for blue */
     orl  %ecx, %edx
     orl  %edi, %edx
     orl  %eax, %edx		/* add alpha at the lowest bytes */
@@ -641,7 +641,7 @@ imgproc_emboss:
 	orl %ecx, %edx 		/* combine bytes into one */
 	orl %edi, %edx		/* combine bytes into one */
 	orl %eax, %edx		/* add alpha */
-	movl %edx, (%r9,%r14,4)		/* store the final pixel */
+	movl %edx, (%r9,%r14,4)		/* store final pixel */
 
 .inc:
 	inc %r11d

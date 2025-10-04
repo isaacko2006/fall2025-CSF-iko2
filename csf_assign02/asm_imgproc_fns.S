@@ -150,9 +150,9 @@ emboss_gray:
     xorl %r15d, %r15d /* gray = 0 */
     jmp 7f
 6:
-    cmpl $255, %r15d /*else if gray > 225 */
+ 	cmpl $255, %r15d /* else if gray > 255 */
     jle 7f
-    movl $255, %r15d /* gray = 225 */
+    movl $255, %r15d /* gray = 255 */
 7:
     movl %r15d, %eax /* move gray into eax */
     popq %r15
@@ -551,7 +551,6 @@ imgproc_emboss:
 	pushq %r13
 	pushq %r14
 	pushq %r15
-	subq $8, %rsp
 
 	movl (%rdi), %r12d       /* width */
 	movl 4(%rdi), %r13d      /* height */
@@ -602,50 +601,47 @@ imgproc_emboss:
     popq  %r8
 
 	/* preserve alpha of current pixel */
-	movl %ebx, %edi
-	pushq %r8
-	pushq %r9
-	call get_a               
-	movl %eax, %r15d         /* save alpha */
-	popq  %r9
+	movl %eax, %r15d	/* save the gray value */
+
+    movl %ebx, %edi
+    pushq %r8
+    pushq %r9
+    call get_a	/* %eax = alpha */
+    popq  %r9
     popq  %r8
 
 	/* assemble gray into RGB */
-	movl %eax, %ebx          /* gray for B */
-	movl %eax, %ecx          /* gray for G */
-	movl %eax, %edx          /* gray for R */
-	shll $16, %edx           /* R = gray << 16 */
-	shll $8, %ecx            /* G = gray << 8 */
-	orl %ecx, %edx
-	orl %ebx, %edx
-	movl %r15d, %ebx
-	shll $24, %ebx           /* alpha << 24 */
-	orl %ebx, %edx           /* add alpha */
-	movl %edx, (%r9,%r14,4)  /* store pixel */
+	movl %r15d, %edx	/* put gray into R base */
+    movl %r15d, %ecx	/* put gray into G base */
+    movl %r15d, %edi	/* put gray into B base */
+    shll $24, %edx		/* shift bits for red */
+    shll $16, %ecx		/*shift bits for green */
+    shll $8,  %edi		/* shift bits for blue*/
+    orl  %ecx, %edx
+    orl  %edi, %edx
+    orl  %eax, %edx		/* add alpha at the lowest bytes */
+    movl %edx, (%r9,%r14,4)
 
 	jmp .inc
 
 .edge:
-	/* edge pixel: set RGB = 128, preserve alpha */
 	movl %ebx, %edi
-	pushq %r8
+    pushq %r8
     pushq %r9
-    call get_a                  /* A -> %eax */
+    call get_a	/* %eax = alpha */
     popq  %r9
     popq  %r8
-	movl %eax, %r15d
 
-	movl $128, %edx
-	shll $16, %edx           /* R = 128 << 16 */
-	movl $128, %ecx
-	shll $8, %ecx            /* G = 128 << 8 */
-	orl %ecx, %edx
-	movl $128, %ebx           /* B = 128 */
-	orl %ebx, %edx
-	movl %r15d, %ebx
-	shll $24, %ebx           /* alpha << 24 */
-	orl %ebx, %edx
-	movl %edx, (%r9,%r14,4)  /* store pixel */
+	movl $128, %edx		/* load 128 to build R */
+	movl $128, %ecx		/* load 128 to build G */
+	movl $128, %edi		/* load 128 to build B */
+	shll $24, %edx		/* shifts bits by 24 to get R */
+	shll $16, %ecx		/* shifts bits by 16 to get G */
+	shll $8,  %edi		/* shifts bits by 8 to get B */
+	orl %ecx, %edx 		/* combine bytes into one */
+	orl %edi, %edx		/* combine bytes into one */
+	orl %eax, %edx		/* add alpha */
+	movl %edx, (%r9,%r14,4)		/* store the final pixel */
 
 .inc:
 	inc %r11d

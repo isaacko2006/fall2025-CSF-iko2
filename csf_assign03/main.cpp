@@ -8,7 +8,7 @@
 
 using namespace std;
 
-// represents one cache line aka a slot
+//represents one cache line aka a slot
 struct Slot
 {
   uint32_t tag = 0;
@@ -16,20 +16,21 @@ struct Slot
   uint32_t last_used = 0;
 };
 
-// represents set containing multiple slots
+//represents set containing multiple slots
 struct Set
 {
   vector<Slot> slots;
 };
-// represents entire cache as a whole
+
+//represents entire cache as a whole (with sets, and number of bits in index and offset)
 struct Cache
 {
   vector<Set> sets;
-  uint32_t set_bits;
-  uint32_t block_bits;
+  uint32_t index_bits;
+  uint32_t offset_bits;
 };
 
-// helper to check if value is a proper power of two (for error checking)
+//helper to check if value is a proper power of two (for error checking)
 bool isPowerOfTwo(uint32_t n)
 {
   //true if only one bit is set in n, uses bit arithmetic (& operator)
@@ -37,22 +38,86 @@ bool isPowerOfTwo(uint32_t n)
 }
 
 //creates a cache with config provided in input
-Cache createCache(uint32_t num_sets, uint32_t num_blocks, uint32_t num_bytes) {
+Cache createCache(uint32_t num_sets, uint32_t num_blocks, uint32_t num_bytes)
+{
   Cache cache;
+
+  cache.index_bits = log2(num_sets);
+  cache.offset_bits = log2(num_bytes);
+  cache.sets.resize(num_sets);
+
+  //put correct number of slots in each set
+  for (size_t i = 0; i < cache.sets.size(); ++i)
+  {
+    cache.sets[i].slots.resize(num_blocks);
+  }
 
   return cache;
 }
 
-//accesses cache and returns boolean of whether it was a hit or not
-bool accessCache(Cache &cache, uint32_t address, bool is_store, uint32_t &timestamp) {
+//accesses cache and returns boolean of whether it was a hit or not (is_store not used for milestone2)
+bool accessCache(Cache &cache, uint32_t address, bool is_store, uint32_t &timestamp)
+{
+  //increment timestamp for LRU
+  timestamp++;
 
+  //break down address into index and tag
+  //don't need offset because data can't span multiple blocks
+  uint32_t index = (address >> cache.offset_bits) & ((1 << cache.index_bits) - 1);
+  uint32_t tag = address >> (cache.index_bits + cache.offset_bits);
+
+  //obtain specific set for index
+  Set &set = cache.sets[index];
+
+  //search for matching tag (hit)
+  for (size_t i = 0; i < set.slots.size(); ++i)
+  {
+    Slot &slot = set.slots[i];
+    if (slot.valid && slot.tag == tag)
+    {
+      //hit, update LRU
+      slot.last_used = timestamp;
+      return true;
+    }
+  }
+
+  //pointer to potential replacement slot for miss
+  Slot *replace_slot = nullptr;
+
+  //look for empty slot
+  for (size_t i = 0; i < set.slots.size(); ++i)
+  {
+    if (!set.slots[i].valid)
+    {
+      replace_slot = &set.slots[i];
+      break;
+    }
+  }
+
+  //if not empty, replace least recently used (LRU)
+  if (!replace_slot)
+  {
+    replace_slot = &set.slots[0];
+    for (size_t i = 1; i < set.slots.size(); ++i)
+    {
+      if (set.slots[i].last_used < replace_slot->last_used)
+      {
+        replace_slot = &set.slots[i];
+      }
+    }
+  }
+
+  //fill slot chosen 
+  replace_slot->valid = true;
+  replace_slot->tag = tag;
+  replace_slot->last_used = timestamp;
+
+  return false;
 }
-
-
 
 int main(int argc, char **argv)
 {
-  // TODO: implement
+  //TODO: implement
 
   //check if correct number of command line arguments given (6 + 1 for file)
   if (argc < 7)

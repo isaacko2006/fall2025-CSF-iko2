@@ -11,9 +11,9 @@ using namespace std;
 //represents one cache line aka a slot
 struct Slot
 {
-  uint32_t tag = 0;
-  bool valid = false;
-  uint32_t last_used = 0;
+  uint32_t tag = 0;        // tags the portion of memory address for this cache line
+  bool valid = false;      // boolean to check if this slot contains valid data
+  uint32_t last_used = 0;  // timestamp for LRU 
 };
 
 //represents set containing multiple slots
@@ -59,60 +59,60 @@ Cache createCache(uint32_t num_sets, uint32_t num_blocks, uint32_t num_bytes)
 bool accessCache(Cache &cache, uint32_t address, bool is_store, uint32_t &timestamp)
 {
   //increment timestamp for LRU
-  timestamp++;
+  timestamp++;  
 
   //break down address into index and tag
   //don't need offset because data can't span multiple blocks
-  uint32_t index = (address >> cache.offset_bits) & ((1 << cache.index_bits) - 1);
-  uint32_t tag = address >> (cache.index_bits + cache.offset_bits);
+  uint32_t index = (address >> cache.offset_bits) & ((1 << cache.index_bits) - 1);  // get index bits from address
+  uint32_t tag = address >> (cache.index_bits + cache.offset_bits);  // get tag bits from address
 
   //obtain specific set for index
-  Set &set = cache.sets[index];
+  Set &set = cache.sets[index];  
 
   //search for matching tag (hit)
-  for (size_t i = 0; i < set.slots.size(); ++i)
+  for (size_t i = 0; i < set.slots.size(); ++i)  //itereate through all slots in the set
   {
-    Slot &slot = set.slots[i];
-    if (slot.valid && slot.tag == tag)
+    Slot &slot = set.slots[i];  // get the reference to the current slot
+    if (slot.valid && slot.tag == tag)  // check if the slot is valid and if the tag matches
     {
       //hit, update LRU
-      slot.last_used = timestamp;
-      return true;
+      slot.last_used = timestamp;  
+      return true;  
     }
   }
 
   //pointer to potential replacement slot for miss
-  Slot *replace_slot = nullptr;
+  Slot *replace_slot = nullptr;  
 
   //look for empty slot
-  for (size_t i = 0; i < set.slots.size(); ++i)
+  for (size_t i = 0; i < set.slots.size(); ++i)  
   {
-    if (!set.slots[i].valid)
+    if (!set.slots[i].valid)  // check if slot is invalid (empty)
     {
-      replace_slot = &set.slots[i];
-      break;
+      replace_slot = &set.slots[i];  // set the pointer to the empty slot
+      break;  
     }
   }
 
   //if not empty, replace least recently used (LRU)
-  if (!replace_slot)
+  if (!replace_slot)  
   {
-    replace_slot = &set.slots[0];
-    for (size_t i = 1; i < set.slots.size(); ++i)
+    replace_slot = &set.slots[0];  // check first slot as replacement
+    for (size_t i = 1; i < set.slots.size(); ++i)  // check the remaining slots
     {
-      if (set.slots[i].last_used < replace_slot->last_used)
+      if (set.slots[i].last_used < replace_slot->last_used)  // find the slot with oldest timestamp
       {
-        replace_slot = &set.slots[i];
+        replace_slot = &set.slots[i];  // update the replacement slot
       }
     }
   }
 
   //fill slot chosen 
-  replace_slot->valid = true;
-  replace_slot->tag = tag;
-  replace_slot->last_used = timestamp;
+  replace_slot->valid = true;  
+  replace_slot->tag = tag;  
+  replace_slot->last_used = timestamp;  
 
-  return false;
+  return false;  
 }
 
 int main(int argc, char **argv)
@@ -120,108 +120,108 @@ int main(int argc, char **argv)
   //TODO: implement
 
   //check if correct number of command line arguments given (6 + 1 for file)
-  if (argc < 7)
+  if (argc < 7)  
   {
-    cerr << "Not enough command line arguments";
-    return 1;
+    cerr << "Not enough command line arguments";  
+    return 1;  
   }
 
-  uint32_t num_sets = stoi(argv[1]);
-  uint32_t num_blocks = stoi(argv[2]);
-  uint32_t num_bytes = stoi(argv[3]);
-  string write_alloc = argv[4];
-  string write_mode = argv[5];
-  string remove_method = argv[6];
+  uint32_t num_sets = stoi(argv[1]);    // get number of sets from arg.
+  uint32_t num_blocks = stoi(argv[2]);  // get number of blocks per set from 2nd arg.
+  uint32_t num_bytes = stoi(argv[3]);   // get block size in bytes from 3rd arg.
+  string write_alloc = argv[4];         // get write allocation policy from 4th arg.
+  string write_mode = argv[5];          // get write mode policy from 5th arg.
+  string remove_method = argv[6];       // get eviction method from 6th arg.
 
   //error checking based on instructions of assignment
-  if (!isPowerOfTwo(num_sets) || !isPowerOfTwo(num_blocks) || !isPowerOfTwo(num_bytes))
+  if (!isPowerOfTwo(num_sets) || !isPowerOfTwo(num_blocks) || !isPowerOfTwo(num_bytes))  
   {
-    cerr << "Error: All numeric parameters must be powers of 2.\n";
-    return 1;
+    cerr << "Error: All numeric parameters must be powers of 2.\n";  
+    return 1;  
   }
 
-  if (num_bytes < 4)
+  if (num_bytes < 4)  // check if the block size is at least 4 
   {
-    cerr << "Error: Block size must be at least 4 bytes.\n";
-    return 1;
+    cerr << "Error: Block size must be at least 4 bytes.\n";  
+    return 1;  
   }
 
-  if (write_alloc == "no-write-allocate" && write_mode == "write-back")
+  if (write_alloc == "no-write-allocate" && write_mode == "write-back")  
   {
-    cerr << "Error: Cannot use no-write-allocate with write-back.\n";
-    return 1;
+    cerr << "Error: Cannot use no-write-allocate with write-back.\n";  
+    return 1;  
   }
 
   //create cache using helper function
-  Cache cache = createCache(num_sets, num_blocks, num_bytes);
+  Cache cache = createCache(num_sets, num_blocks, num_bytes);  
 
-  //variables to store statistics
-  uint64_t total_loads = 0;
-  uint64_t total_stores = 0;
-  uint64_t load_hits = 0;
-  uint64_t load_misses = 0;
-  uint64_t store_hits = 0;
-  uint64_t store_misses = 0;
-  uint64_t total_cycles = 0;
-  uint32_t timestamp = 0;
+  //create counter variables to store statistics
+  uint64_t total_loads = 0;     
+  uint64_t total_stores = 0;   
+  uint64_t load_hits = 0;      
+  uint64_t load_misses = 0;    
+  uint64_t store_hits = 0;     
+  uint64_t store_misses = 0;   
+  uint64_t total_cycles = 0;   
+  uint32_t timestamp = 0;      
 
   //variables to read memory access trace from stdin
-  string operation;
-  string hex_address;
+  string operation;     
+  string hex_address;   
   //third field to ignore according to assignment
-  int third_field;
+  int third_field;      
 
   //read in memory trace, continue while more info left
-  while (cin >> operation >> hex_address >> third_field)
+  while (cin >> operation >> hex_address >> third_field)  
   {
-    uint32_t address;
+    uint32_t address;  // the address to store 
 
     //stringstream to interpret string as number
-    stringstream ss;
+    stringstream ss; 
     //convert hex address into and int and store into address
-    ss << hex << hex_address;
-    ss >> address;
+    ss << hex << hex_address;  
+    ss >> address;  // get the address in integer form
 
-    bool hit = false;
+    bool hit = false;  // variable to store cache hit/miss status
 
     //simulates load instruction
-    if (operation == "l")
+    if (operation == "l")  
     {
-      total_loads++;
-      hit = accessCache(cache, address, false, timestamp);
-      if (hit)
+      total_loads++;  //increment load counter
+      hit = accessCache(cache, address, false, timestamp);  
+      if (hit)  
       {
         //1 cycle for hit
-        load_hits++;
-        total_cycles += 1;
+        load_hits++;  // increment load hits counter
+        total_cycles += 1;  // add to total cycle
       }
       else
       {
         //100 extra cycles for miss
-        load_misses++;
+        load_misses++;  //increment load miss
         total_cycles += 1 + 100;
       }
     }
 
     //simulates store instruction
-    else if (operation == "s")
+    else if (operation == "s")  
     {
       total_stores++;
-      hit = accessCache(cache, address, true, timestamp);
-      if (hit)
+      hit = accessCache(cache, address, true, timestamp);  
+      if (hit) 
       {
         //1 cycle for hit
         store_hits++;
-        total_cycles += 1;
+        total_cycles += 1;  
       }
-      else
+      else  // If cache miss
       {
         //100 extra cycles for miss
         store_misses++;
         total_cycles += 1 + 100;
       }
     }
-  }
+  }  // End of trace file reading loop
 
   //printing out final statistics in format of instructions
   cout << "Total loads: " << total_loads << endl;

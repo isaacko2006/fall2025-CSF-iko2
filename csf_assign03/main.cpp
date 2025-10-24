@@ -193,7 +193,7 @@ int main(int argc, char **argv)
   uint64_t store_hits = 0;     
   uint64_t store_misses = 0;   
   uint64_t total_cycles = 0;   
-  uint32_t timestamp = 0;      
+  uint32_t timestamp = 0;
 
   //variables to read memory access trace from stdin
   string operation;     
@@ -230,7 +230,7 @@ int main(int argc, char **argv)
       {
         //100 extra cycles for miss
         load_misses++;  //increment load miss
-        total_cycles += 1 + 100 + extra_cycles;  
+        total_cycles += 1 + (num_bytes / 4) * 100 + extra_cycles;
       }
     }
 
@@ -256,15 +256,13 @@ int main(int argc, char **argv)
         
         if (write_alloc == "no-write-allocate") {
           // for no-write allocate, write directly to memory
-          total_cycles += 100;  // Only memory write cycles
+          total_cycles += (num_bytes / 4) * 100;  // Only memory write cycles
         } else {
           // for write allocate, allocate block and write
           if (write_mode == "write-through") {
-            // For write through, cache access + memory read + memory write + write back evict
-            total_cycles += 1 + 100 + 100 + extra_cycles;
+            total_cycles += 1 + (num_bytes / 4) * 100 + (num_bytes / 4) * 100 + extra_cycles;
           } else {
-            // For write back, cache access + memory read + write back evict + write to cache
-            total_cycles += 1 + 100 + extra_cycles + 1;
+            total_cycles += 1 + (num_bytes / 4) * 100 + extra_cycles + 1;
           }
         }
       }

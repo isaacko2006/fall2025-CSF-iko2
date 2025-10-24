@@ -14,6 +14,7 @@ struct Slot
   uint32_t tag = 0;        // tags the portion of memory address for this cache line
   bool valid = false;      // boolean to check if this slot contains valid data
   uint32_t last_used = 0;  // timestamp for LRU 
+  bool dirty = false;      // dirty bit for write-back policy (true if modified but not written to memory)
 };
 
 //represents set containing multiple slots
@@ -55,11 +56,14 @@ Cache createCache(uint32_t num_sets, uint32_t num_blocks, uint32_t num_bytes)
   return cache;
 }
 
-//accesses cache and returns boolean of whether it was a hit or not (is_store not used for milestone2)
-bool accessCache(Cache &cache, uint32_t address, bool is_store, uint32_t &timestamp)
+//accesses cache and returns boolean of whether it was a hit or not
+//also returns additional cycles needed for write-back evictions
+bool accessCache(Cache &cache, uint32_t address, bool is_store, uint32_t &timestamp, 
+                string write_alloc, string write_mode, uint32_t &extra_cycles)
 {
   //increment timestamp for LRU
   timestamp++;  
+  extra_cycles = 0;  // Initialize extra cycles counter for write-back evictions
 
   //break down address into index and tag
   //don't need offset because data can't span multiple blocks
@@ -77,8 +81,22 @@ bool accessCache(Cache &cache, uint32_t address, bool is_store, uint32_t &timest
     {
       //hit, update LRU
       slot.last_used = timestamp;  
+      
+      //begin store operations
+      if (is_store) {
+        if (write_mode == "write-back") {
+          slot.dirty = true;  // set block to dirty for write-back 
+        }
+      }
+      
       return true;  
     }
+  }
+
+  // check cache miss for write allocation 
+  if (is_store && write_alloc == "no-write-allocate") {
+    //no modification just return the miss
+    return false;
   }
 
   //pointer to potential replacement slot for miss
@@ -105,12 +123,24 @@ bool accessCache(Cache &cache, uint32_t address, bool is_store, uint32_t &timest
         replace_slot = &set.slots[i];  // update the replacement slot
       }
     }
+    
+    // check if we need to write back the dirty block for write back 
+    if (write_mode == "write-back" && replace_slot->dirty) {
+      extra_cycles += 100;
+    }
   }
 
   //fill slot chosen 
   replace_slot->valid = true;  
   replace_slot->tag = tag;  
   replace_slot->last_used = timestamp;  
+  
+  // check dirty bit for write back
+  if (write_mode == "write-back" && is_store) {
+    replace_slot->dirty = true;  // mark as dirty for store
+  } else {
+    replace_slot->dirty = false;  // mark as clean for write through
+  }
 
   return false;  
 }
@@ -183,23 +213,24 @@ int main(int argc, char **argv)
     ss >> address;  // get the address in integer form
 
     bool hit = false;  // variable to store cache hit/miss status
+    uint32_t extra_cycles = 0;  // variable to store extra cycles for write-back evictions
 
     //simulates load instruction
     if (operation == "l")  
     {
       total_loads++;  //increment load counter
-      hit = accessCache(cache, address, false, timestamp);  
+      hit = accessCache(cache, address, false, timestamp, write_alloc, write_mode, extra_cycles);  
       if (hit)  
       {
         //1 cycle for hit
         load_hits++;  // increment load hits counter
         total_cycles += 1;  // add to total cycle
       }
-      else
+      else  
       {
         //100 extra cycles for miss
         load_misses++;  //increment load miss
-        total_cycles += 1 + 100;
+        total_cycles += 1 + 100 + extra_cycles;  
       }
     }
 
@@ -207,21 +238,38 @@ int main(int argc, char **argv)
     else if (operation == "s")  
     {
       total_stores++;
-      hit = accessCache(cache, address, true, timestamp);  
+      hit = accessCache(cache, address, true, timestamp, write_alloc, write_mode, extra_cycles);  
       if (hit) 
       {
         //1 cycle for hit
         store_hits++;
         total_cycles += 1;  
+        
+        // for write through add extra cycles
+        if (write_mode == "write-through") {
+          total_cycles += 100;
+        }
       }
-      else  // If cache miss
+      else
       {
-        //100 extra cycles for miss
         store_misses++;
-        total_cycles += 1 + 100;
+        
+        if (write_alloc == "no-write-allocate") {
+          // for no-write allocate, write directly to memory
+          total_cycles += 100;  // Only memory write cycles
+        } else {
+          // for write allocate, allocate block and write
+          if (write_mode == "write-through") {
+            // For write through, cache access + memory read + memory write + write back evict
+            total_cycles += 1 + 100 + 100 + extra_cycles;
+          } else {
+            // For write back, cache access + memory read + write back evict + write to cache
+            total_cycles += 1 + 100 + extra_cycles + 1;
+          }
+        }
       }
     }
-  }  // End of trace file reading loop
+  } 
 
   //printing out final statistics in format of instructions
   cout << "Total loads: " << total_loads << endl;

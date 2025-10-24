@@ -4,7 +4,7 @@ Isaac Ko: Set up Github repository, downloaded and starter code, put in #include
 Gavin Simurdiak: Adjusted Isaac's original main.cpp, added error checking for parameter arguments and file not opening, stores contents of file to variables and output to cout
 
 Milestone 2:
-Isaac Ko: Implemented sets in the cache, blocks in each set, bytes in each block, and helped with LRU. 
-Gavin Simurdiak: Completed implementation of LRU and performed error checking on all functions.
+Isaac Ko: Implemented sets in the cache, blocks in each set, bytes in each block, and helped with LRU. Created write-through or write-back.
+Gavin Simurdiak: Completed implementation of LRU and performed error checking on all functions. Created write-allocate or no-write-allocate.
 
 TODO (for MS3): best cache report

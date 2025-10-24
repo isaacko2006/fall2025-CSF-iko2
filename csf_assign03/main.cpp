@@ -57,9 +57,9 @@ Cache createCache(uint32_t num_sets, uint32_t num_blocks, uint32_t num_bytes)
 }
 
 //accesses cache and returns boolean of whether it was a hit or not
-//also returns additional cycles needed for write-back evictions
+//also returns additional cycles needed for write back
 bool accessCache(Cache &cache, uint32_t address, bool is_store, uint32_t &timestamp, 
-                string write_alloc, string write_mode, uint32_t &extra_cycles)
+                string write_alloc, string write_mode, uint32_t &extra_cycles, uint32_t num_bytes)
 {
   //increment timestamp for LRU
   timestamp++;  
@@ -126,7 +126,7 @@ bool accessCache(Cache &cache, uint32_t address, bool is_store, uint32_t &timest
     
     // check if we need to write back the dirty block for write back 
     if (write_mode == "write-back" && replace_slot->dirty) {
-      extra_cycles += 100;
+      extra_cycles += (num_bytes / 4) * 100;
     }
   }
 
@@ -219,7 +219,7 @@ int main(int argc, char **argv)
     if (operation == "l")  
     {
       total_loads++;  //increment load counter
-      hit = accessCache(cache, address, false, timestamp, write_alloc, write_mode, extra_cycles);  
+      hit = accessCache(cache, address, false, timestamp, write_alloc, write_mode, extra_cycles, num_bytes);  
       if (hit)  
       {
         //1 cycle for hit
@@ -238,7 +238,7 @@ int main(int argc, char **argv)
     else if (operation == "s")  
     {
       total_stores++;
-      hit = accessCache(cache, address, true, timestamp, write_alloc, write_mode, extra_cycles);  
+      hit = accessCache(cache, address, true, timestamp, write_alloc, write_mode, extra_cycles, num_bytes);  
       if (hit) 
       {
         //1 cycle for hit

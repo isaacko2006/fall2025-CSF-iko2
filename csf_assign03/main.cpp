@@ -256,11 +256,11 @@ int main(int argc, char **argv)
         
         if (write_alloc == "no-write-allocate") {
           // for no-write allocate, write directly to memory
-          total_cycles += (num_bytes / 4) * 100;  // Only memory write cycles
+          total_cycles += 100;  // Only memory write cycles
         } else {
           // for write allocate, allocate block and write
           if (write_mode == "write-through") {
-            total_cycles += 1 + (num_bytes / 4) * 100 + (num_bytes / 4) * 100 + extra_cycles;
+            total_cycles += 1 + (num_bytes / 4) * 100 + 100 + extra_cycles;
           } else {
             total_cycles += 1 + (num_bytes / 4) * 100 + extra_cycles + 1;
           }

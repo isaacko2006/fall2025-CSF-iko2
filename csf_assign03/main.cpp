@@ -60,12 +60,12 @@ Cache createCache(uint32_t num_sets, uint32_t num_blocks, uint32_t num_bytes)
 //accesses cache and returns boolean of whether it was a hit or not
 //also returns additional cycles needed for write back
 bool accessCache(Cache &cache, uint32_t address, bool is_store, uint32_t &timestamp, 
-                string write_alloc, string write_mode, uint32_t &extra_cycles, uint32_t num_bytes)
+                string write_alloc, string write_mode, const string &replacement_type, uint32_t &extra_cycles, uint32_t num_bytes)
 {
   //increment timestamp for LRU
   //initialize extra cycles counter for write-back evictions
   timestamp++;  
-  extra_cycles = 0
+  extra_cycles = 0;
 
   //break down address into index and tag
   //don't need offset because data can't span multiple blocks
@@ -84,14 +84,15 @@ bool accessCache(Cache &cache, uint32_t address, bool is_store, uint32_t &timest
     if (slot.valid && slot.tag == tag)
     {
       //hit, update LRU
-      slot.last_used = timestamp;  
-      
+      if (replacement_type == "lru")
+      {
+        slot.last_used = timestamp;
+      }
       //begin store operations
-      if (is_store) {
-        if (write_mode == "write-back") {
+      if (is_store && write_mode == "write-back") {
           //set block to dirty for write-back
           slot.dirty = true;
-        }
+        
       }
       
       return true;  
@@ -119,20 +120,18 @@ bool accessCache(Cache &cache, uint32_t address, bool is_store, uint32_t &timest
     }
   }
 
-  //if not empty, replace least recently used (LRU)
+  //if no empty, do replacement (LRU or FIFO)
   if (!replace_slot)  
   {
-    //check first slot for replacement, and then check remaining slots
-    replace_slot = &set.slots[0];
-    for (size_t i = 1; i < set.slots.size(); ++i)
-    {
-      //find slot with oldest timestamp
-      if (set.slots[i].last_used < replace_slot->last_used)
+
+      //find one with smallest last used value (works for both LRU and FIFO because we establish timestamp for LRU above)
+      replace_slot = &set.slots[0];
+      for (size_t i = 1; i < set.slots.size(); ++i)
       {
-        //update replacement slot
-        replace_slot = &set.slots[i];
+        //compare each slot's last used to find oldest to replace
+        if (set.slots[i].last_used < replace_slot->last_used)
+          replace_slot = &set.slots[i];
       }
-    }
     
     // check if we need to write back the dirty block for write back 
     if (write_mode == "write-back" && replace_slot->dirty) {
@@ -195,6 +194,12 @@ int main(int argc, char **argv)
     return 1;  
   }
 
+  if (remove_method != "lru" && remove_method != "fifo")
+  {
+    cerr << "Error: Removal method has to be lru or fifo'.\n";
+    return 1;
+  }
+
   //create cache using helper function
   Cache cache = createCache(num_sets, num_blocks, num_bytes);  
 
@@ -235,7 +240,7 @@ int main(int argc, char **argv)
     if (operation == "l")  
     {
       total_loads++;
-      hit = accessCache(cache, address, false, timestamp, write_alloc, write_mode, extra_cycles, num_bytes);  
+      hit = accessCache(cache, address, false, timestamp, write_alloc, write_mode, remove_method, extra_cycles, num_bytes);  
       if (hit)  
       {
         //1 cycle for hit and add to total cycles
@@ -254,7 +259,7 @@ int main(int argc, char **argv)
     else if (operation == "s")  
     {
       total_stores++;
-      hit = accessCache(cache, address, true, timestamp, write_alloc, write_mode, extra_cycles, num_bytes);  
+      hit = accessCache(cache, address, true, timestamp, write_alloc, write_mode, remove_method, extra_cycles, num_bytes);  
       if (hit) 
       {
         //1 cycle for hit

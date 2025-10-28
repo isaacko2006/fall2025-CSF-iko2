@@ -11,10 +11,11 @@ using namespace std;
 //represents one cache line aka a slot
 struct Slot
 {
-  uint32_t tag = 0;        // tags the portion of memory address for this cache line
-  bool valid = false;      // boolean to check if this slot contains valid data
-  uint32_t last_used = 0;  // timestamp for LRU 
-  bool dirty = false;      // dirty bit for write-back policy (true if modified but not written to memory)
+  //tag portion of memory, validity check for valid data, timestamp for LRU, dirty bit for write-back
+  uint32_t tag = 0;
+  bool valid = false;
+  uint32_t last_used = 0;
+  bool dirty = false;
 };
 
 //represents set containing multiple slots
@@ -62,22 +63,25 @@ bool accessCache(Cache &cache, uint32_t address, bool is_store, uint32_t &timest
                 string write_alloc, string write_mode, uint32_t &extra_cycles, uint32_t num_bytes)
 {
   //increment timestamp for LRU
+  //initialize extra cycles counter for write-back evictions
   timestamp++;  
-  extra_cycles = 0;  // Initialize extra cycles counter for write-back evictions
+  extra_cycles = 0
 
   //break down address into index and tag
   //don't need offset because data can't span multiple blocks
-  uint32_t index = (address >> cache.offset_bits) & ((1 << cache.index_bits) - 1);  // get index bits from address
-  uint32_t tag = address >> (cache.index_bits + cache.offset_bits);  // get tag bits from address
+  uint32_t index = (address >> cache.offset_bits) & ((1 << cache.index_bits) - 1);
+  uint32_t tag = address >> (cache.index_bits + cache.offset_bits);
 
   //obtain specific set for index
   Set &set = cache.sets[index];  
 
   //search for matching tag (hit)
-  for (size_t i = 0; i < set.slots.size(); ++i)  //itereate through all slots in the set
+  //start by iterating through all slots in set
+  for (size_t i = 0; i < set.slots.size(); ++i)
   {
-    Slot &slot = set.slots[i];  // get the reference to the current slot
-    if (slot.valid && slot.tag == tag)  // check if the slot is valid and if the tag matches
+    //get reference to current slot and check if valid/if tag matches
+    Slot &slot = set.slots[i];
+    if (slot.valid && slot.tag == tag)
     {
       //hit, update LRU
       slot.last_used = timestamp;  
@@ -85,7 +89,8 @@ bool accessCache(Cache &cache, uint32_t address, bool is_store, uint32_t &timest
       //begin store operations
       if (is_store) {
         if (write_mode == "write-back") {
-          slot.dirty = true;  // set block to dirty for write-back 
+          //set block to dirty for write-back
+          slot.dirty = true;
         }
       }
       
@@ -105,9 +110,11 @@ bool accessCache(Cache &cache, uint32_t address, bool is_store, uint32_t &timest
   //look for empty slot
   for (size_t i = 0; i < set.slots.size(); ++i)  
   {
-    if (!set.slots[i].valid)  // check if slot is invalid (empty)
+    //check if slot invalid (empty)
+    if (!set.slots[i].valid)
     {
-      replace_slot = &set.slots[i];  // set the pointer to the empty slot
+      //set pointer to empty slot and break out of loop
+      replace_slot = &set.slots[i];
       break;  
     }
   }
@@ -115,12 +122,15 @@ bool accessCache(Cache &cache, uint32_t address, bool is_store, uint32_t &timest
   //if not empty, replace least recently used (LRU)
   if (!replace_slot)  
   {
-    replace_slot = &set.slots[0];  // check first slot as replacement
-    for (size_t i = 1; i < set.slots.size(); ++i)  // check the remaining slots
+    //check first slot for replacement, and then check remaining slots
+    replace_slot = &set.slots[0];
+    for (size_t i = 1; i < set.slots.size(); ++i)
     {
-      if (set.slots[i].last_used < replace_slot->last_used)  // find the slot with oldest timestamp
+      //find slot with oldest timestamp
+      if (set.slots[i].last_used < replace_slot->last_used)
       {
-        replace_slot = &set.slots[i];  // update the replacement slot
+        //update replacement slot
+        replace_slot = &set.slots[i];
       }
     }
     
@@ -137,9 +147,11 @@ bool accessCache(Cache &cache, uint32_t address, bool is_store, uint32_t &timest
   
   // check dirty bit for write back
   if (write_mode == "write-back" && is_store) {
-    replace_slot->dirty = true;  // mark as dirty for store
+    //mark dirty for storage
+    replace_slot->dirty = true;
   } else {
-    replace_slot->dirty = false;  // mark as clean for write through
+    //mark clean for write through
+    replace_slot->dirty = false;
   }
 
   return false;  
@@ -156,12 +168,12 @@ int main(int argc, char **argv)
     return 1;  
   }
 
-  uint32_t num_sets = stoi(argv[1]);    // get number of sets from arg.
-  uint32_t num_blocks = stoi(argv[2]);  // get number of blocks per set from 2nd arg.
-  uint32_t num_bytes = stoi(argv[3]);   // get block size in bytes from 3rd arg.
-  string write_alloc = argv[4];         // get write allocation policy from 4th arg.
-  string write_mode = argv[5];          // get write mode policy from 5th arg.
-  string remove_method = argv[6];       // get eviction method from 6th arg.
+  uint32_t num_sets = stoi(argv[1]);    // get number of sets from arg
+  uint32_t num_blocks = stoi(argv[2]);  // get number of blocks per set from 2nd arg
+  uint32_t num_bytes = stoi(argv[3]);   // get block size in bytes from 3rd arg
+  string write_alloc = argv[4];         // get write allocation policy from 4th arg
+  string write_mode = argv[5];          // get write mode policy from 5th arg
+  string remove_method = argv[6];       // get removal method from 6th arg
 
   //error checking based on instructions of assignment
   if (!isPowerOfTwo(num_sets) || !isPowerOfTwo(num_blocks) || !isPowerOfTwo(num_bytes))  
@@ -170,7 +182,8 @@ int main(int argc, char **argv)
     return 1;  
   }
 
-  if (num_bytes < 4)  // check if the block size is at least 4 
+  // check if the block size is at least 4 
+  if (num_bytes < 4) 
   {
     cerr << "Error: Block size must be at least 4 bytes.\n";  
     return 1;  
@@ -204,32 +217,35 @@ int main(int argc, char **argv)
   //read in memory trace, continue while more info left
   while (cin >> operation >> hex_address >> third_field)  
   {
-    uint32_t address;  // the address to store 
+    uint32_t address; 
 
     //stringstream to interpret string as number
     stringstream ss; 
     //convert hex address into and int and store into address
     ss << hex << hex_address;  
-    ss >> address;  // get the address in integer form
+    // get the address in integer form
+    ss >> address; 
 
-    bool hit = false;  // variable to store cache hit/miss status
-    uint32_t extra_cycles = 0;  // variable to store extra cycles for write-back evictions
+    // variable to store cache hit/miss status
+    bool hit = false;  
+    // variable to store extra cycles for write-back evictions
+    uint32_t extra_cycles = 0; 
 
     //simulates load instruction
     if (operation == "l")  
     {
-      total_loads++;  //increment load counter
+      total_loads++;
       hit = accessCache(cache, address, false, timestamp, write_alloc, write_mode, extra_cycles, num_bytes);  
       if (hit)  
       {
-        //1 cycle for hit
-        load_hits++;  // increment load hits counter
-        total_cycles += 1;  // add to total cycle
+        //1 cycle for hit and add to total cycles
+        load_hits++; 
+        total_cycles += 1;
       }
       else  
       {
         //100 extra cycles for miss
-        load_misses++;  //increment load miss
+        load_misses++; 
         total_cycles += 1 + (num_bytes / 4) * 100 + extra_cycles;
       }
     }
@@ -256,7 +272,7 @@ int main(int argc, char **argv)
         
         if (write_alloc == "no-write-allocate") {
           // for no-write allocate, write directly to memory
-          total_cycles += 100;  // Only memory write cycles
+          total_cycles += 100;
         } else {
           // for write allocate, allocate block and write
           if (write_mode == "write-through") {

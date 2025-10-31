@@ -29,6 +29,9 @@ Result: 16,929,594 cycles (1K cache)
 Command: ./csim 256 2 8 write-allocate write-back lru < gcc.trace
 Result: 10,349,134 cycles (4K cache)
 
+Command: ./csim 512 2 8 write-allocate write-back lru < gcc.trace
+Result: 9,318,494 (8K cache)
+
 Command: ./csim 256 4 16 write-allocate write-back lru < gcc.trace
 Result: 9,353,719 cycles (16K cache)
 
@@ -40,7 +43,7 @@ of cache sizes on different associativities and byte sizes for varied results.
 Findings:
 1K and 4K caches showed poor performance with cycle counts exceeding 10M. 4K and 8k
 provided cycle counts of around 9-10M. 16K cache showed optimal performance with cycle 
-counts around 9-9.5M
+counts around 9-9.5M, making 16K caches the most optimal.
 
 2. Associativity Impact (gcc.trace):
 
@@ -60,9 +63,9 @@ Command: ./csim 64 16 16 write-allocate write-back lru < gcc.trace
 Result: 9,276,093 cycles (16-way)
 
 Reason for commands:
-For associativity testing, we used a fixed 16KB cache to eliminate capacity as a 
-variable. We tested 1-way through 16-way associativity, which allowed us to observe 
-any existing patterns.
+For associativity testing, we used a fixed 16KB cache and fixed write policy 
+to eliminate capacity and write policy as a variable. We tested 1-way through 16-way 
+associativity, which allowed us to observe any existing patterns.
 
 Findings: 
 The higher the associativity, the better the results but resulted in worse and worse
@@ -93,7 +96,7 @@ block sizes.
 Findings:
 The smaller block sizes (4 bytes) provide better performance than the larger blocks.
 
-4. Write Policy Impact (256×4×16 cache, gcc.trace):
+4. Write Policy Impact:
 
 Command: ./csim 256 4 16 write-allocate write-back lru < gcc.trace
 Result: 9,353,719 cycles
@@ -121,9 +124,21 @@ Result: 9,353,719 cycles (LRU)
 Command: ./csim 256 4 16 write-allocate write-back fifo < gcc.trace
 Result: 9,854,722 cycles (FIFO)
 
+Command: ./csim 256 1 16 write-allocate write-back lru  < gcc.trace
+Result: 20,324,767 (LRU)
+
+Command: ./csim 256 1 16 write-allocate write-back fifo < gcc.trace
+Result: 20,324,767 (FIFO)
+
+Command: ./csim 32 8 16 write-allocate write-back lru  < gcc.trace
+Result: 11,078,352 (LRU)
+
+Command: ./csim 32 8 16 write-allocate write-back fifo < gcc.trace
+Result: 12,618,535 (FIFO)
+
 Reason for commands:
 By testing LRU vs FIFO with identical configurations, we could measure the pure impact 
-of replacement strategy. 
+of replacement strategy. We tested several different configurations.
 
 Findings:
 LRU performs slightly better than FIFO but the performance difference is negligible.

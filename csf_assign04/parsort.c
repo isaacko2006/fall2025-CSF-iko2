@@ -214,77 +214,83 @@ int quicksort(int64_t *arr, unsigned long start, unsigned long end, unsigned lon
     return 1;
   }
 
+
   // Partition
   unsigned long mid = partition(arr, start, end);
 
-  // Recursively sort the left and right partitions
-  int left_success, right_success = 0;
-  // TODO: modify this code so that the recursive calls execute in child processes
-  pid_t child_pid = fork();
-  if (child_pid == 0)
-  {
-    // executing in the child
-    // ...do work...
-    left_success = quicksort(arr, start, mid, par_threshold);
-    if (left_success)
-    {
-      exit(0);
-    }
-    else
-    {
+  //variables to determine the children's fork status
+  int left_success = 0;
+  int right_success = 0;
+
+  //fork for the left side
+  pid_t left_pid = fork();
+  if (left_pid == 0) {
+    //sort the left side
+    int success = quicksort(arr, start, mid, par_threshold);
+    if (success == 0) {
       exit(1);
     }
+    else {
+      exit(0);
+    }
   }
-  else if (child_pid < 0)
-  {
-    // fork failed
-    // ...handle error...
+  else if (left_pid < 0) {
+    //fork failed
     perror("fork error");
     return 0;
   }
-  else
-  {
-    // in parent
-  }
 
-  int rc, wstatus;
-  rc = waitpid(child_pid, &wstatus, 0);
-  if (rc < 0)
-  {
-    // waitpid failed
-    // ...handle error...
-    perror("waitpid error");
+  //fork the right side 
+  pid_t right_pid = fork();
+  if (right_pid == 0) {
+    //sort the right side
+    int success = quicksort(arr, mid + 1, end, par_threshold);
+    if (success == 0) {
+      exit(1);
+    }
+    else {
+      exit(0);
+    }
+  }
+  else if (right_pid < 0) {
+    //fork failed
+    perror("fork error");
+    //need to wait for the left side to finish to prevent zombies
+    int wstatus;
+    if (waitpid(left_pid, &wstatus, 0) < 0) {
+        perror("left waitpid after right fork fail");
+    }
     return 0;
   }
-  else
-  {
-    // check status of child
-    if (!WIFEXITED(wstatus))
-    {
-      // child did not exit normally (e.g., it was terminated by a signal)
-      // ...handle child failure...
-      perror("child error");
-      return 0;
-    }
-    else if (WEXITSTATUS(wstatus) != 0)
-    {
-      // child exited with a non-zero exit code
-      // ...handle child failure...
-      perror("child error");
-      return 0;
-    }
-    else
-    {
-      // child exited with exit code zero (it was successful)
+
+  //parent must wait for both left and right side
+  int wstatus;
+  //wait for the left side
+  if (waitpid(left_pid, &wstatus, 0) < 0) {
+    perror("fork fail");
+    return 0;
+  } else {
+    //check if the left side finished successfully
+    if (WIFEXITED(wstatus) && WEXITSTATUS(wstatus) == 0) {
       left_success = 1;
     }
   }
 
-  //sort right half in parent portion
-  right_success = quicksort(arr, mid + 1, end, par_threshold);
-
-  if (!left_success || !right_success)
+  //wait for the right side
+  if (waitpid(right_pid, &wstatus, 0) < 0) {
+    perror("fork fail");
     return 0;
+  } else {
+    //check if the right side finished successfully
+    if (WIFEXITED(wstatus) && WEXITSTATUS(wstatus) == 0) {
+      right_success = 1;
+    }
+  }
+
+  //if both children finished successfully, return 1
+  if (!left_success || !right_success) {
+    return 0;
+  }
 
   return 1;
 }

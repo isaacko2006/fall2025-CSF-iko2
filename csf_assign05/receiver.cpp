@@ -18,86 +18,92 @@ int main(int argc, char **argv) {
   std::string username = argv[3];
   std::string room_name = argv[4];
 
-  //connect to the server
+  //connect to server
   Connection conn;
   conn.connect(server_hostname, server_port);
   
-  if (!conn.is_open()) { //if the connection is not open, throw an error
+  //if connection not open, throw error
+  if (!conn.is_open()) { 
     std::cerr << "Error: failed to connect to server\n";
     return 1;
   }
 
-  //send the rlogin message
+  //send rlogin message
   Message login_msg(TAG_RLOGIN, username);
-  if (!conn.send(login_msg)) { //if the login message was not sent successfully, throw an error
+  //if login message not sent successfully, throw error
+  if (!conn.send(login_msg)) {
     std::cerr << "Error: failed to send login message\n";
     return 1;
   }
 
-  //receive the response to the login
+  //receive response to login
   Message response;
-  if (!conn.receive(response)) { //if the login response was not received successfully, throw an error
+  //if login response not received successfully, throw error
+  if (!conn.receive(response)) { 
     std::cerr << "Error: failed to receive login response\n";
     return 1;
   }
 
-  //check if the login was successful
-  if (response.tag == TAG_ERR) { //if the response is an error, throw an error
+  //check if login was successful, but if response is error then throw error
+  if (response.tag == TAG_ERR) {
     std::cerr << response.data << "\n";
     return 1;
   }
 
-  //send the join message
+  //send join message, but if can't send successfully throw error
   Message join_msg(TAG_JOIN, room_name);
-  if (!conn.send(join_msg)) { //if the join message was not sent successfully, throw an error
+  if (!conn.send(join_msg)) {
     std::cerr << "Error: failed to send join message\n";
     return 1;
   }
 
-  //receive the response to the join
-  if (!conn.receive(response)) { //if the join response was not received successfully, throw an error
+  //receive response to the join, but if didn't receive correctly throw error
+  if (!conn.receive(response)) {
     std::cerr << "Error: failed to receive join response\n";
     return 1;
   }
 
-  //check if the join was successful
-  if (response.tag == TAG_ERR) { //if the response is an error, throw an error
+  //check if join successful, but if response error then throw error
+  if (response.tag == TAG_ERR) {
     std::cerr << response.data << "\n";
     return 1;
   }
 
-  //loop waiting for messages from the server
+  //loop waiting for messages from server
   while (true) {
     Message msg;
-    if (!conn.receive(msg)) { //if the message was not received successfully, exit the loop
+    //if message not received successfully, exit loop
+    if (!conn.receive(msg)) { 
       //connection closed or error occurred
       break;
     }
 
-    //check if the message is a delivery message
+    //check if message is delivery message
     if (msg.tag == TAG_DELIVERY) {
-      //parse the message
+      //parse message
       std::string payload = msg.data;
-      //find the first colon in the message
+      //find first colon in message
       size_t first_colon = payload.find(':');
-      if (first_colon == std::string::npos) { //if the first colon is not found, skip message
+      //if first colon not found, skip message
+      if (first_colon == std::string::npos) { 
         continue;
       }
-      //find the second colon in the message
+      //find second colon in message
       size_t second_colon = payload.find(':', first_colon + 1);
-      if (second_colon == std::string::npos) { //if the second colon is not found, skip this message
+      //if second colon not found, skip message
+      if (second_colon == std::string::npos) {
         continue;
       }
 
-      //isolate the sender and message text by using the colons 
+      //isolate sender and message text by using colons 
       std::string sender = payload.substr(first_colon + 1, second_colon - first_colon - 1);
-      //isolate the message text by using the second colon
+      //isolate message text by using second colon
       std::string message_text = payload.substr(second_colon + 1);
 
-      //display the message as "sender: message_text"
+      //display message as "sender: message_text"
       std::cout << sender << ": " << message_text << "\n";
     } else if (msg.tag == TAG_ERR) {
-      //if there is an error message, print the error message to stdcerr
+      //if error message, print to std:cerr
       std::cerr << msg.data << "\n";
     }
   }

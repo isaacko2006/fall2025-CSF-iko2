@@ -52,6 +52,11 @@ int main(int argc, char **argv) {
     std::cerr << response.data << "\n";
     return 1;
   }
+  //if response is not ok, something unexpected happened
+  if (response.tag != TAG_OK) {
+    std::cerr << "Error: unexpected response to login\n";
+    return 1;
+  }
 
   //loop to read commands from user
   std::string line;
@@ -113,13 +118,13 @@ int main(int argc, char **argv) {
       }
     }
 
-    //if should_quit is true, exit loop
-    if (should_quit) {
-      break;
-    }
-
     //receive response from server
     if (!conn.receive(response)) {
+      //if we're quitting, server may close connection immediately, which is acceptable
+      if (should_quit) {
+        break;
+      }
+      //otherwise, this is an error
       std::cerr << "Error: failed to receive server response\n";
       return 1;
     }
@@ -127,6 +132,15 @@ int main(int argc, char **argv) {
     //check if error from the server
     if (response.tag == TAG_ERR) {
       std::cerr << response.data << "\n";
+    } else if (response.tag != TAG_OK) {
+      //if response is not ok or err, something unexpected happened
+      std::cerr << "Error: unexpected response from server\n";
+    }
+    //if response is ok, silently continue (success)
+
+    //if should_quit is true, exit loop after receiving response
+    if (should_quit) {
+      break;
     }
   }
 

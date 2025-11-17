@@ -49,6 +49,11 @@ int main(int argc, char **argv) {
     std::cerr << response.data << "\n";
     return 1;
   }
+  //if response is not ok, something unexpected happened
+  if (response.tag != TAG_OK) {
+    std::cerr << "Error: unexpected response to login\n";
+    return 1;
+  }
 
   //send join message, but if can't send successfully throw error
   Message join_msg(TAG_JOIN, room_name);
@@ -66,6 +71,11 @@ int main(int argc, char **argv) {
   //check if join successful, but if response error then throw error
   if (response.tag == TAG_ERR) {
     std::cerr << response.data << "\n";
+    return 1;
+  }
+  //if response is not ok, something unexpected happened
+  if (response.tag != TAG_OK) {
+    std::cerr << "Error: unexpected response to join\n";
     return 1;
   }
 

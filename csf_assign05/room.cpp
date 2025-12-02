@@ -20,6 +20,7 @@ Room::~Room()
 void Room::add_member(User *user)
 {
   // TODO: add User to the room
+  //critical section needing guard
   Guard g(lock);
   members.insert(user);
 }
@@ -27,6 +28,7 @@ void Room::add_member(User *user)
 void Room::remove_member(User *user)
 {
   // TODO: remove User from the room
+  //critical section needing guard
   Guard g(lock);
   members.erase(user);
 }
@@ -38,6 +40,7 @@ void Room::broadcast_message(const std::string &sender_username, const std::stri
   std::string delivery_data = room_name + ":" + sender_username + ":" + message_text;
   Message *msg = new Message(TAG_DELIVERY, delivery_data);
 
+  //broadcasting message is a critical section which requires guard
   Guard g(lock);
   for (User *user : members)
   {

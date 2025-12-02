@@ -19,6 +19,7 @@ MessageQueue::~MessageQueue()
     m_messages.pop_front();
     delete msg;
   }
+  //semaphore and mutex destruction
   sem_destroy(&m_avail);
   pthread_mutex_destroy(&m_lock);
 }
@@ -60,6 +61,7 @@ Message *MessageQueue::dequeue()
   }
 
   // TODO: remove the next message from the queue, return it
+  //lock before removing, then make sure not empty and remove, then unlock
   pthread_mutex_lock(&m_lock);
   assert(!m_messages.empty());
   Message *msg = m_messages.front();

@@ -19,6 +19,8 @@
 
 // TODO: add any additional data types that might be helpful
 //       for implementing the Server member functions
+
+//connection data that has server and connection within
 struct ConnData
 {
   Server *server;
@@ -122,12 +124,12 @@ namespace
             break;
           continue;
         }
-        // Leave current room if in one
+        //leave current room if in one
         if (current_room)
         {
-          // Senders don't need to be removed from room (only receivers are members)
+          //senders don't need to be removed from room (only receivers are members)
         }
-        // Join new room
+        //join new room
         current_room = server->find_or_create_room(msg.data);
         Message ok(TAG_OK, "Joined room");
         if (!conn->send(ok))
@@ -137,6 +139,7 @@ namespace
       {
         if (!current_room)
         {
+          //if not in room to leave, error
           Message err(TAG_ERR, "Not in a room");
           if (!conn->send(err))
             break;
@@ -155,6 +158,7 @@ namespace
       }
       else
       {
+        //if none of above tags, unknown command
         Message err(TAG_ERR, "Unknown command");
         if (!conn->send(err))
           break;
@@ -256,7 +260,7 @@ namespace
         return nullptr;
       }
 
-      // Join the room
+      //join room
       Room *room = server->find_or_create_room(join_msg.data);
       room->add_member(user);
       Message join_ok(TAG_OK, "Joined room");
@@ -283,7 +287,7 @@ namespace
         return nullptr;
       }
 
-      // Sender starts with no room
+      //sender starts with no room
       Room *current_room = nullptr;
       chat_with_sender(sender, server, conn, current_room);
       delete sender;

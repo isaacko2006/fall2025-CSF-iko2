@@ -41,10 +41,10 @@ void Room::broadcast_message(const std::string &sender_username, const std::stri
   Guard g(lock);
   for (User *user : members)
   {
-    // each user has own message queue, push copy for each user
+    //each user has own message queue, push copy for each user
     user->mqueue.enqueue(new Message(*msg));
   }
 
-  // cleanup original temporary message
+  //cleanup original temporary message
   delete msg;
 }

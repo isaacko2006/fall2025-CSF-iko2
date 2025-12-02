@@ -32,7 +32,7 @@ struct ConnData
 namespace
 {
 
-  // Helper function to validate username/room name (alphanumeric only, at least 1 char)
+  //hlper function to validate username/room name 
   bool is_valid_name(const std::string &name)
   {
     if (name.empty())
@@ -45,7 +45,7 @@ namespace
     return true;
   }
 
-  // function to handle chatting with receiver
+  //function that handles chatting with receiver
   void chat_with_receiver(User *user, Connection *conn, Room *room)
   {
     while (true)
@@ -63,14 +63,14 @@ namespace
       }
       delete msg;
     }
-    // Remove user from room when disconnecting
+    //remove user from room upon disconnecting
     if (room)
     {
       room->remove_member(user);
     }
   }
 
-  // function to handle chatting with sender
+  //function to handle chatting with sender
   void chat_with_sender(User *sender, Server *server, Connection *conn, Room *&current_room)
   {
     while (true)
@@ -78,7 +78,7 @@ namespace
       Message msg;
       if (!conn->receive(msg))
       {
-        // Check if it's an invalid message (should send err) vs connection error (disconnect)
+        //check if invalid message (should send err) or connection error (disconnect)
         if (conn->get_last_result() == Connection::INVALID_MSG)
         {
           Message err(TAG_ERR, "Invalid message format");
@@ -86,11 +86,11 @@ namespace
             break;
           continue;
         }
-        // Otherwise, connection error - disconnect
+        //otherwise, connection error so disconnect
         break;
       }
 
-      // Check for empty tag (invalid message)
+      //check for empty tag (invalid message)
       if (msg.tag.empty())
       {
         Message err(TAG_ERR, "Invalid message format");
@@ -179,7 +179,7 @@ namespace
     Message login;
     if (!conn->receive(login))
     {
-      // If invalid message format, send error before disconnecting
+      //if invalid message format, send error before disconnecting
       if (conn->get_last_result() == Connection::INVALID_MSG)
       {
         Message err(TAG_ERR, "Invalid message format");
@@ -189,7 +189,7 @@ namespace
       return nullptr;
     }
 
-    // Validate login tag
+    //validate login tag
     if (login.tag != TAG_SLOGIN && login.tag != TAG_RLOGIN)
     {
       Message err(TAG_ERR, "Invalid login tag");
@@ -198,7 +198,7 @@ namespace
       return nullptr;
     }
 
-    // Validate username
+    //validate username
     if (!is_valid_name(login.data))
     {
       Message err(TAG_ERR, "Invalid username");
@@ -222,11 +222,11 @@ namespace
         return nullptr;
       }
 
-      // Wait for join message from receiver
+      //wait for join message from receiver
       Message join_msg;
       if (!conn->receive(join_msg))
       {
-        // If invalid message format, send error before disconnecting
+        //if invalid message format, send error before disconnecting
         if (conn->get_last_result() == Connection::INVALID_MSG)
         {
           Message err(TAG_ERR, "Invalid message format");
@@ -246,7 +246,7 @@ namespace
         return nullptr;
       }
 
-      // Validate room name
+      //validate room name
       if (!is_valid_name(join_msg.data))
       {
         Message err(TAG_ERR, "Invalid room name");

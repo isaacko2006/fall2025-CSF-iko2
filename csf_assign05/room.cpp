@@ -34,7 +34,9 @@ void Room::remove_member(User *user)
 void Room::broadcast_message(const std::string &sender_username, const std::string &message_text)
 {
   // TODO: send a message to every (receiver) User in the room
-  Message *msg = new Message(TAG_DELIVERY, sender_username + ": " + message_text);
+  // Format: room:sender:message_text
+  std::string delivery_data = room_name + ":" + sender_username + ":" + message_text;
+  Message *msg = new Message(TAG_DELIVERY, delivery_data);
 
   Guard g(lock);
   for (User *user : members)

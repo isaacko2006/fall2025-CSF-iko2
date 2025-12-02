@@ -100,6 +100,19 @@ bool Connection::receive(Message &msg) {
     line.pop_back();
   }
 
+  // Check if message is empty (invalid)
+  if (line.empty()) {
+    m_last_result = INVALID_MSG;
+    return false;
+  }
+
+  // Check if message is too long (including newline that was removed)
+  // The original message with newline should be <= MAX_LEN
+  if (n > (ssize_t)Message::MAX_LEN) {
+    m_last_result = INVALID_MSG;
+    return false;
+  }
+
   //find colon in message and split message into tag and data
   size_t colon_pos = line.find(':');
   //if no colon, throw error

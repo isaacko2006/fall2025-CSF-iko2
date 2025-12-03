@@ -23,7 +23,9 @@ This prevents race conditions like concurrent modification of the queue or readi
 by using a mutex to lock and unlock, as well as preventing blocking while utilizing the mutex. Dequeue is also a critical section because
 we don't want messages to be removed while messages may be added (or messages are empty). We utilize a similar mutex locking and unlocking 
 to enqueue as well as the semaphore to block until messages are available to dequeue. This prevents attempted removal from an empty queue, 
-accessing freed memory (due to race conditions), and removing the same message twice.
+accessing freed memory (due to race conditions), and removing the same message twice. The cool thing about the usage of the semaphore
+and the lock in the Message Queue implementation is that, like the assignment instructions said, the lock ensures the queue can only
+be modified by one thread at a time, and the semaphore "notifies" that messages are available, effectively creating this "smart counter".
 
 2. Room:
 Each Room has a set of Users as well as a mutex lock. All senders/receivers joining or leaving the room access this Users set concurrently,
